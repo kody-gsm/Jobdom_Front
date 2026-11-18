@@ -70,15 +70,25 @@ class FakeStream extends EventTarget {
 }
 Object.defineProperty(globalThis, "EventSource", { value: FakeStream });
 const flush = () => new Promise<void>((resolve) => setImmediate(resolve));
+const random = mock.method(Math, "random", () => 0.5);
 mock.timers.enable({ apis: ["setTimeout"] });
 try {
+  for (const [value, expected] of [
+    [0, [1000, 2000, 4000, 8000, 16000, 20000, 20000]],
+    [0.5, [2000, 4000, 8000, 16000, 32000, 40000, 40000]],
+    [1, [3000, 6000, 12000, 24000, 48000, 60000, 60000]],
+  ] as const) {
+    random.mock.mockImplementation(() => value);
+    assert.deepEqual([0, 1, 2, 3, 4, 5, 9].map(getReconnectDelay), expected);
+  }
+  random.mock.mockImplementation(() => 0.5);
   const ctrl = new AbortController();
   const received: number[] = [];
-  let connected = 0;
+  const connected: boolean[] = [];
   const reservationEvents: unknown[] = [];
   subscribeNotifications(
     (item) => received.push(item.id),
-    () => connected++,
+    (isReconnect) => connected.push(isReconnect),
     ctrl.signal,
     (event) => reservationEvents.push(event),
   );
@@ -103,47 +113,52 @@ try {
   assert.deepEqual(received, [7]);
   assert.equal(reservationEvents.length, 1);
   assert.equal((reservationEvents[0] as { action: string }).action, "EXPIRED");
-  assert.equal(connected, 1);
+  assert.deepEqual(connected, [false]);
   first.dispatchEvent(new Event("error"));
   first.dispatchEvent(new Event("error"));
   assert.equal(first.closed, true);
-  mock.timers.tick(3000);
+  mock.timers.tick(1999);
+  await flush();
+  assert.equal(tickets, 1, "wait for the randomized delay before requesting a new ticket");
+  mock.timers.tick(1);
   await flush();
   assert.equal(tickets, 2);
   assert.match(FakeStream.instances[1].url, /ticket=ticket-2$/);
   FakeStream.instances[1].dispatchEvent(new Event("connect"));
-  assert.equal(connected, 2);
+  assert.deepEqual(connected, [false, true]);
   FakeStream.instances[1].dispatchEvent(new Event("error"));
   ctrl.abort();
   mock.timers.tick(3000);
   await flush();
   assert.equal(tickets, 2);
-  // 연속 실패는 3초, 6초, 12초 … 최대 60초로 간격을 늘리고, 연결되면 다시 3초부터 시작한다.
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 9].map(getReconnectDelay), [3000, 6000, 12000, 24000, 48000, 60000, 60000]);
+  // 난수 0.5에서는 2초, 4초로 늘고, 연결 성공 후에는 다시 2초부터 시작한다.
   const backoff = new AbortController();
   let disconnects = 0;
+  const recovered: boolean[] = [];
   const ticketsBefore = tickets;
-  subscribeNotifications(() => {}, () => {}, backoff.signal, undefined, () => disconnects++);
+  subscribeNotifications(() => {}, (isReconnect) => recovered.push(isReconnect), backoff.signal, undefined, () => disconnects++);
   await flush();
   const failing = FakeStream.instances.at(-1)!;
   failing.dispatchEvent(new Event("error"));
   assert.equal(disconnects, 1);
-  mock.timers.tick(3000);
+  mock.timers.tick(2000);
   await flush();
   FakeStream.instances.at(-1)!.dispatchEvent(new Event("error"));
-  mock.timers.tick(3000);
+  mock.timers.tick(3999);
   await flush();
-  assert.equal(tickets, ticketsBefore + 2, "second failure waits 6 seconds");
-  mock.timers.tick(3000);
+  assert.equal(tickets, ticketsBefore + 2, "second failure waits for its randomized backoff");
+  mock.timers.tick(1);
   await flush();
   assert.equal(tickets, ticketsBefore + 3);
   FakeStream.instances.at(-1)!.dispatchEvent(new Event("connect"));
+  assert.deepEqual(recovered, [true], "retrying a failed initial connection also catches up missed data");
   FakeStream.instances.at(-1)!.dispatchEvent(new Event("error"));
-  mock.timers.tick(3000);
+  mock.timers.tick(2000);
   await flush();
   assert.equal(tickets, ticketsBefore + 4, "a successful connect resets the delay");
   backoff.abort();
   console.log("알림 수신·재연결·티켓 재발급·로그아웃 정리 검사 통과");
 } finally {
   mock.timers.reset();
+  random.mock.restore();
 }

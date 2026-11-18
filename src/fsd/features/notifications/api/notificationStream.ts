@@ -6,9 +6,11 @@ import { issueNotificationSubscribeTicket, type NotificationItem } from "./notif
 
 const FIRST_RETRY_MS = 3000;
 const MAX_RETRY_MS = 60_000;
-/** 연속 실패 횟수에 따른 재연결 대기 시간: 3초, 6초, 12초 … 최대 60초. */
-export const getReconnectDelay = (failures: number) =>
-  Math.min(FIRST_RETRY_MS * 2 ** Math.max(0, failures), MAX_RETRY_MS);
+/** 최초 1~3초로 분산하고, 연속 실패 시 대기 범위를 늘리되 최대 60초를 넘기지 않는다. */
+export const getReconnectDelay = (failures: number) => {
+  const maxDelay = Math.min(FIRST_RETRY_MS * 2 ** Math.max(0, failures), MAX_RETRY_MS);
+  return maxDelay / 3 + Math.random() * (maxDelay * 2 / 3);
+};
 
 const isDocumentHidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
 
@@ -23,7 +25,7 @@ export function subscribeNotifications(
 ) {
   let stream: EventSource | null = null;
   let retry: ReturnType<typeof setTimeout> | undefined;
-  let hasConnected = false;
+  let hasAttemptedConnection = false;
   let failures = 0;
   let waitingForVisibility = false;
 
@@ -60,14 +62,14 @@ export function subscribeNotifications(
   };
   const connect = async () => {
     if (signal.aborted) return;
+    const isReconnect = hasAttemptedConnection;
+    hasAttemptedConnection = true;
     try {
       // 티켓은 일회용이므로 재연결할 때마다 새로 발급한다.
       const { ticket } = await issueNotificationSubscribeTicket();
       if (signal.aborted) return;
       stream = new EventSource(`${API_BASE_URL}/api/notifications/subscribe?ticket=${encodeURIComponent(ticket)}`);
       stream.addEventListener("connect", () => {
-        const isReconnect = hasConnected;
-        hasConnected = true;
         failures = 0;
         onConnect(isReconnect);
       });
