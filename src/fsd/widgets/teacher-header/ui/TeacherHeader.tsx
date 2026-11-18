@@ -46,7 +46,8 @@ export function TeacherHeader() {
           <Image src="/JobdamIcon.svg" alt="잡담" width={88} height={40} priority />
         </Link>
 
-        <nav data-tutorial-target="navigation" aria-label="교사 주요 메뉴" className="col-span-2 row-start-2 flex h-12 items-center gap-1 border-t border-border text-xs font-semibold text-secondary-text sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:h-auto sm:justify-center sm:gap-6 sm:border-0 sm:text-base lg:gap-12">
+        <nav aria-label="교사 주요 메뉴" className="col-span-2 row-start-2 flex h-12 items-center border-t border-border text-xs font-semibold text-secondary-text sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:h-auto sm:justify-center sm:border-0 sm:text-base">
+          <div data-tutorial-target="navigation" className="flex h-full w-full items-center gap-1 sm:h-auto sm:w-auto sm:gap-6 lg:gap-12">
           {visibleNavigation.map((item) => {
             const isActive = item.href === "/teacher"
               ? pathname === item.href
@@ -57,6 +58,7 @@ export function TeacherHeader() {
               </Link>
             );
           })}
+          </div>
         </nav>
 
         <div data-tutorial-target="account" className="flex items-center justify-end gap-2 text-secondary-text sm:gap-3">

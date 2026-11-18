@@ -152,7 +152,7 @@ export const ConsultationForm = ({
               />
             </div>
 
-            <div data-tutorial-target="consultation-type">
+            <div data-tutorial-target="consultation-teacher">
               <p className="mb-2 text-sm font-semibold text-[#27364A]">상담 선생님</p>
               <div
                 data-consultation-field="teacher"
@@ -188,7 +188,7 @@ export const ConsultationForm = ({
               </div>
             </div>
 
-            <div data-tutorial-target="consultation-content">
+            <div data-tutorial-target="consultation-title">
               <TextField
                 data-consultation-field="title"
                 error={errorTarget === "title" ? "제목을 입력해주세요" : undefined}
@@ -199,7 +199,7 @@ export const ConsultationForm = ({
               />
             </div>
 
-            <div data-tutorial-target="consultation-content" className="space-y-2">
+            <div data-tutorial-target="consultation-category" className="space-y-2">
               <p className="text-sm font-semibold text-[#27364A]">상담 카테고리</p>
               <div
                 data-consultation-field="category"
@@ -225,7 +225,7 @@ export const ConsultationForm = ({
               </div>
             </div>
 
-            <div data-tutorial-target="consultation-content">
+            <div data-tutorial-target="consultation-body">
               <TextAreaField
                 data-consultation-field="content"
                 error={errorTarget === "content" ? "내용을 입력해주세요" : undefined}

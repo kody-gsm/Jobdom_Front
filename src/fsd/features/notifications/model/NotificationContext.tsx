@@ -129,6 +129,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     const ctrl = abortRef.current;
     if (!ctrl || ctrl.signal.aborted) return;
     const requestVersion = ++notificationRequestVersion.current;
+    const idsBeforeRequest = new Set(notificationIds.current);
     const readChanges = { ids: new Set<number>(), all: false };
     pendingListReadChanges.current = readChanges;
     pagination.current.loading = true;
@@ -144,7 +145,7 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       const shouldReplace = page === 0 && notificationLoadedRef.current;
       setNotifications((current) => {
         const next = shouldReplace
-          ? mergeNotifications([], content)
+          ? mergeNotifications(current.filter((item) => !idsBeforeRequest.has(item.id)), content)
           : mergeNotifications(current, content);
         notificationIds.current = new Set(next.map((item) => item.id));
         return next;
@@ -318,8 +319,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
       streamOpen = true;
       if (isReconnect) refreshCount();
       reservationRefresh();
-      // 목록을 한 번 연 뒤 SSE가 재연결되면 놓친 알림을 다시 가져옵니다.
-      if (isReconnect && notificationLoadedRef.current) void loadNotifications(0);
+      // 패널을 열지 않았더라도 재연결 사이에 놓친 알림을 다시 가져온다.
+      if (isReconnect) void loadNotifications(0);
     };
     // 보이지 않는 탭에서는 1분마다 개수를 묻지 않고, 탭이 다시 보일 때 한 번 확인한다.
     // 실시간 연결이 살아 있으면 새 알림마다 개수를 다시 받으므로 5분에 한 번만 확인한다.

@@ -19,13 +19,21 @@ const student = createPracticeServer({ userId: 1, name: "김학생", role: "STUD
 for (const path of ["/auth/reissue", "/auth/logout", "/auth/tutorial", "/auth/tutorial/complete", "/api/notifications/subscribe-ticket"]) {
   assert.equal(student.handle({ method: "POST", path, body: undefined }).handled, false, path);
 }
-// 알림은 연습용 1건을 직접 열어 읽어 본다. 읽으면 개수가 0이 된다.
-assert.deepEqual(call(student, "GET", "/api/notifications/unread-count").data, { unreadCount: 1 });
-const practiceNotifications = call(student, "GET", "/api/notifications?page=0&size=20").data as { content: { id: number; targetUrl: string; isRead: boolean }[] };
+// 실제 흐름처럼 학생의 상담 신청은 대기 상태로 시작하고, 선생님의 수락 뒤에 알림이 도착한다.
+const notificationStudent = createPracticeServer({ userId: 1, name: "김학생", role: "STUDENT" }, now);
+assert.deepEqual(call(notificationStudent, "GET", "/api/notifications/unread-count").data, { unreadCount: 0 });
+call(notificationStudent, "POST", "/student/course", { teacherId: 901, title: "진로 고민", content: "어떻게 준비할까요?", category: "진학", date: "2026-11-13", period: "2교시" });
+assert.deepEqual(call(notificationStudent, "GET", "/api/notifications/unread-count").data, { unreadCount: 0 });
+assert.equal(notificationStudent.approveLatestStudentConsultation(), true);
+const practiceNotifications = call(notificationStudent, "GET", "/api/notifications?page=0&size=20").data as { content: { id: number; type: string; title: string; targetId: number; targetUrl: string; isRead: boolean }[] };
 assert.equal(practiceNotifications.content.length, 1);
-assert.equal(practiceNotifications.content[0].targetUrl, "/form/9001"); // 학생 알림 단계 화면(/forms/9001)으로 이어진다.
-call(student, "PATCH", `/api/notifications/${practiceNotifications.content[0].id}/read`);
-assert.deepEqual(call(student, "GET", "/api/notifications/unread-count").data, { unreadCount: 0 });
+assert.equal(practiceNotifications.content[0].type, "COUNSELING_APPROVED");
+assert.match(practiceNotifications.content[0].title, /수락/);
+assert.match(practiceNotifications.content[0].targetUrl, /^\/student\/course\/\d+$/);
+assert.deepEqual(call(notificationStudent, "GET", "/api/notifications/unread-count").data, { unreadCount: 1 });
+assert.equal(notificationStudent.approveLatestStudentConsultation(), false);
+call(notificationStudent, "PATCH", `/api/notifications/${practiceNotifications.content[0].id}/read`);
+assert.deepEqual(call(notificationStudent, "GET", "/api/notifications/unread-count").data, { unreadCount: 0 });
 const teacherNotifications = call(createPracticeServer({ userId: 77, name: "박선생", role: "TEACHER" }, now), "GET", "/api/notifications").data as { content: { targetUrl: string }[] };
 assert.match(teacherNotifications.content[0].targetUrl, /^\/teacher\/course\/\d+$/); // 교사 알림은 상담 일정(/teacher)으로 이어진다.
 

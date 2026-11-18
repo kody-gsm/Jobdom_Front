@@ -13,6 +13,38 @@
   }
 }
 
+@keyframes tutorial-attention {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgb(2 197 81 / 0%); text-shadow: none; }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 5px rgb(2 197 81 / 42%), 0 0 20px rgb(2 197 81 / 38%); text-shadow: 0 0 12px rgb(2 197 81 / 80%); }
+}
+
+@keyframes tutorial-outline-pulse {
+  0%, 100% { opacity: 1; filter: none; }
+  50% { opacity: 0.75; filter: drop-shadow(0 0 8px rgb(2 197 81 / 90%)); }
+}
+
+@keyframes tutorial-field-attention {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(2 197 81 / 0%); }
+  50% { box-shadow: 0 0 0 5px rgb(2 197 81 / 42%), 0 0 20px rgb(2 197 81 / 30%); }
+}
+
+[data-tutorial-attention] {
+  animation: tutorial-attention 1.3s ease-in-out infinite;
+}
+
+input[data-tutorial-attention], textarea[data-tutorial-attention] {
+  animation: tutorial-field-attention 1.3s ease-in-out infinite;
+}
+
+.tutorial-spotlight-pulse {
+  animation: tutorial-outline-pulse 1.3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-tutorial-attention], .tutorial-spotlight-pulse { animation: none; }
+  [data-tutorial-attention] { box-shadow: 0 0 0 3px rgb(2 197 81 / 45%); }
+}
+
 @theme {
   --color-brand: #02C551;
   --color-brand-hover: #02A946;

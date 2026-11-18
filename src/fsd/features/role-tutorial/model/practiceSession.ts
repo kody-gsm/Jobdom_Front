@@ -5,6 +5,7 @@ import type { PracticeIdentity } from "./practiceServer.ts";
 // 연습 모드가 켜져 있는 동안 모든 요청은 연습용 서버가 답한다.
 // 켜고 끌 때 캐시를 비워서 실제 데이터와 연습 데이터가 섞이지 않게 한다.
 let activeKey: string | null = null;
+let activeServer: ReturnType<typeof import("./practiceServer.ts").createPracticeServer> | null = null;
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
 
@@ -19,6 +20,7 @@ export const startPractice = async (key: string, identity: PracticeIdentity) => 
   if (loadingKey !== key) return;
   loadingKey = null;
   const server = createPracticeServer(identity);
+  activeServer = server;
   setRequestInterceptor(server.handle);
   authenticatedGetCache.clear();
   activeKey = key;
@@ -29,9 +31,18 @@ export const stopPractice = () => {
   loadingKey = null;
   if (activeKey === null) return;
   setRequestInterceptor(null);
+  activeServer = null;
   authenticatedGetCache.clear();
   activeKey = null;
   notify();
+};
+
+export const approvePracticeConsultation = () => {
+  if (!activeServer?.approveLatestStudentConsultation()) return false;
+  // 알림 제공자가 같은 연습 서버에서 새 개수와 목록을 다시 읽는다.
+  setRequestInterceptor((request) => activeServer?.handle(request) ?? { handled: false });
+  authenticatedGetCache.clear();
+  return true;
 };
 
 export const subscribePractice = (listener: () => void) => {
