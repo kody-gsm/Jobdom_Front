@@ -72,7 +72,7 @@ export const useResetPasswordForm = () => {
       await sendPasswordResetCode(requestedEmail);
       if (requestVersion !== verificationRequestVersion.current || form.email.trim() !== requestedEmail) return;
       setIsCodeSent(true);
-      verificationCountdown.start(180);
+      verificationCountdown.start(600);
       setErrors((current) => ({ ...current, email: undefined, verificationCode: undefined }));
       setErrorField(null);
     } catch (caught) {

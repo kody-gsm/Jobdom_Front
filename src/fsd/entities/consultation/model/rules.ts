@@ -24,8 +24,7 @@ const GENERAL_PERIODS = CONSULTATION_SCHEDULE
   .map(({ period }) => period)
   .filter((period) =>
     !BLOCKED_GENERAL_PERIODS.has(period) &&
-    !GENERAL_END_PERIODS.has(period) &&
-    !BLOCKED_LATE_PERIODS.has(period),
+    !GENERAL_END_PERIODS.has(period),
   );
 
 export const toConsultationKind = (type: ConsultationType): ConsultationKind =>
