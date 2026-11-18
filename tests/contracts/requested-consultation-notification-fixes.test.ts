@@ -11,7 +11,7 @@ import {
 import { formatNotificationTime } from "../../src/fsd/features/notifications/model/time.ts";
 
 assert.deepEqual(getAvailablePeriods("career", "임경원 선생님"), [
-  "1교시", "2교시", "3교시", "4교시", "점심시간", "5교시", "6교시", "7교시", "8교시", "9교시", "저녁시간",
+  "1교시", "2교시", "3교시", "4교시", "점심시간", "5교시", "6교시", "7교시", "저녁시간",
 ]);
 assert.deepEqual(getAvailablePeriods("career", "김권예소 선생님"), [
   "1교시", "2교시", "3교시", "4교시", "점심시간", "5교시", "6교시", "7교시", "8교시", "9교시", "저녁시간",
