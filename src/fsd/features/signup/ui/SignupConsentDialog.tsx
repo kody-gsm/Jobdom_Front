@@ -15,7 +15,7 @@ type SignupConsentDialogProps = {
   onAgree: () => void;
   onReadToEnd: () => void;
   hasReadToEnd: boolean;
-  returnFocusRef: RefObject<HTMLButtonElement | null>;
+  returnFocusRef: RefObject<HTMLElement | null>;
 };
 
 export const SignupConsentDialog = ({
