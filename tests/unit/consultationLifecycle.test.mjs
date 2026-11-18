@@ -84,24 +84,30 @@ const readyForm = async (type = "career") => {
   return form;
 };
 
-for (const [type, selectedTeacher, blockedPeriod] of [
-  ["career", teacher, "9교시"],
-  ["general", { id: 4, name: "강우빈" }, "8교시"],
-]) {
-  test(`${type}: saved ${blockedPeriod} is not restored or selectable`, async () => {
-    writeConsultationDraft(environment.storage, key, type, {
-      ...savedDraft, teacherId: selectedTeacher.id, period: blockedPeriod,
-    });
-    const form = mount(type);
-    teachers.resolve([selectedTeacher]);
-    await environment.settle();
-    assert.equal(form.value.selectedTime, null);
-    assert.equal(form.value.isTimeUnavailable(blockedPeriod), true);
-    form.value.toggleTime(blockedPeriod);
-    await environment.settle();
-    assert.equal(form.value.selectedTime, null);
+test("career: saved 9교시 is not restored or selectable for 임경원", async () => {
+  writeConsultationDraft(environment.storage, key, "career", {
+    ...savedDraft, period: "9교시",
   });
-}
+  const form = mount("career");
+  teachers.resolve([teacher]);
+  await environment.settle();
+  assert.equal(form.value.selectedTime, null);
+  assert.equal(form.value.isTimeUnavailable("9교시"), true);
+  form.value.toggleTime("9교시");
+  await environment.settle();
+  assert.equal(form.value.selectedTime, null);
+});
+
+test("general: saved 8교시 remains selectable for WEE counseling", async () => {
+  writeConsultationDraft(environment.storage, key, "general", {
+    ...savedDraft, teacherId: 4, period: "8교시",
+  });
+  const form = mount("general");
+  teachers.resolve([{ id: 4, name: "강우빈" }]);
+  await environment.settle();
+  assert.equal(form.value.isTimeUnavailable("8교시"), false);
+  assert.equal(form.value.selectedTime, "8교시");
+});
 
 test("A1: clicking the current tab preserves loaded teachers, selection and category", async () => {
   seedDraft();
