@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  getAvailablePeriods,
   getNextAvailableDate,
   getNextWeekdays,
   getSelectableConsultationDates,
@@ -197,7 +198,10 @@ export const useConsultationAvailability = ({
   };
   const isTimeUnavailable = (time: string) =>
     availabilityStatus !== "success" ||
-    (counselType === "general" && time === "4교시") ||
+    !getAvailablePeriods(
+      counselType,
+      selectedTeacher ? getConsultationTeacherLabel(selectedTeacher.name) : null,
+    ).includes(time) ||
     (selectedDate === koreaToday && !isSelectableToday(time)) ||
     serverUnavailablePeriods.has(time) ||
     (selectedTeacher !== null &&

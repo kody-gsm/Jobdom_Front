@@ -78,7 +78,7 @@ const readyForm = async (type = "career") => {
   await environment.settle();
   assert.equal(form.value.availabilityStatus, "success");
   if (form.value.selectedTime === null) {
-    form.value.toggleTime("9교시");
+    form.value.toggleTime(type === "general" ? "7교시" : "9교시");
     await environment.settle();
   }
   return form;
@@ -258,17 +258,32 @@ test("A9: explicit availability retry bypasses cache and applies current locks",
   assert.equal(form.value.selectedTime, null);
 });
 
+for (const period of ["8교시", "9교시"]) {
+  test(`general consultation rejects a saved ${period} on a future date`, async () => {
+    writeConsultationDraft(environment.storage, key, "general", { ...savedDraft, period });
+    const form = mount("general");
+    teachers.resolve([teacher]);
+    await environment.settle();
+    assert.equal(form.value.selectedDate, savedDraft.date);
+    assert.equal(form.value.selectedTime, null);
+    assert.equal(form.value.isTimeUnavailable(period), true);
+    form.value.toggleTime(period);
+    await environment.settle();
+    assert.equal(form.value.selectedTime, null);
+  });
+}
+
 test("submit preserves the POST contract and invalidates only its consultation kind", async () => {
   const form = await readyForm("general");
   assert.equal(form.value.isTimeUnavailable("4교시"), true);
-  assert.equal(form.value.isTimeUnavailable("9교시"), false);
-  assert.equal(form.value.selectedTime, "9교시");
+  assert.equal(form.value.isTimeUnavailable("7교시"), false);
+  assert.equal(form.value.selectedTime, "7교시");
   await form.value.handleSubmit(event);
   const posted = postCalls()[0];
   assert.equal(posted?.path, "/student/common");
   assert.deepEqual(JSON.parse(String(posted?.init?.body)), {
     title: "진로 상담", content: "포트폴리오 상담", category: "취업",
-    teacherId: 3, date: "2026-11-02", period: "9교시",
+    teacherId: 3, date: "2026-11-02", period: "7교시",
   });
   assert.deepEqual(posted?.init?.invalidateCache, ["/student/common", "/teacher/common"]);
 });
@@ -329,7 +344,7 @@ test("A2: manual date selection wins while the saved teacher finishes loading", 
 test("A2: switching tabs during hydration preserves text and rejects the old teacher response", async () => {
   seedDraft();
   writeConsultationDraft(environment.storage, key, "general", {
-    ...savedDraft, title: "일반 상담", teacherId: 4, date: "2026-11-03", period: "8교시",
+    ...savedDraft, title: "일반 상담", teacherId: 4, date: "2026-11-03", period: "7교시",
   });
   const oldTeachers = teachers;
   const form = mount();
@@ -351,7 +366,7 @@ test("A2: switching tabs during hydration preserves text and rejects the old tea
   assert.equal(form.value.title, "일반 상담");
   assert.equal(form.value.selectedTeacher?.id, 4);
   assert.equal(form.value.selectedDate, "2026-11-03");
-  assert.equal(form.value.selectedTime, "8교시");
+  assert.equal(form.value.selectedTime, "7교시");
 });
 
 test("availability response for a superseded date cannot lock the new selection", async () => {
