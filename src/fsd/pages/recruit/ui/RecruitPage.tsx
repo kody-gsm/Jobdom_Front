@@ -36,7 +36,7 @@ export const RecruitPage = () => {
   return (
     <div className="min-h-dvh bg-surface text-ink">
       <StudentHeader />
-      <main className="mx-auto w-full max-w-[1180px] px-6 py-10 lg:px-10 lg:py-12">
+      <main className="mx-auto w-full max-w-[1280px] px-6 py-8 lg:px-10 lg:py-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-3xl font-bold tracking-[-0.035em] sm:text-4xl">취업 공고</h1>
           <div data-tutorial-target="recruit-search" className="flex flex-col gap-3 sm:flex-row sm:items-center">

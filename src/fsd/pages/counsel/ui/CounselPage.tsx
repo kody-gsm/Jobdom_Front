@@ -8,7 +8,7 @@ export const CounselPage = ({ initialType }: { initialType: ConsultationType }) 
 
   >
     <StudentHeader />
-    <main className="mx-auto w-full max-w-[1180px] px-6 py-10 lg:px-10 lg:py-12">
+    <main className="mx-auto w-full max-w-[1280px] px-6 py-8 lg:px-10 lg:py-10">
       <h1 className="text-3xl font-bold tracking-[-0.035em] sm:text-4xl">상담 신청</h1>
       <div className="mt-6">
         <ConsultationForm initialType={initialType} />
