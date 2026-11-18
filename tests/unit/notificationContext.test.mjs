@@ -356,6 +356,35 @@ test("a reconnect bypasses the cached list even though issuing a ticket no longe
   assert.equal(h.lists[1].init?.signal, h.streams[0].signal);
 });
 
+test("a reconnect catches up missed notifications even before the panel was opened", async (t) => {
+  const h = await setup(t);
+  await h.settle(h.counts[0], { unreadCount: 0 });
+  await act(async () => h.streams[0].connect(false));
+  assert.equal(h.lists.length, 0, "the initial connection keeps the list lazy");
+  let reservations = 0;
+  h.window.addEventListener("reservation-changed", () => reservations++);
+  await act(async () => { h.streams[0].disconnect(); h.streams[0].connect(true); });
+  assert.equal(h.counts.length, 2);
+  assert.equal(h.lists.length, 1);
+  assert.equal(h.lists[0].init?.cache, "no-store");
+  assert.equal(reservations, 1);
+  await h.settle(h.lists[0], page([item(2), item(1)]));
+  await h.settle(h.counts[1], { unreadCount: 2 });
+  assert.deepEqual(h.values.list.notifications.map(({ id }) => id), [2, 1]);
+  assert.equal(h.values.unread, 2);
+  assert.equal(h.values.list.notificationLoaded, true);
+});
+
+test("reconnect catch-up preserves live notifications arriving during the list request", async (t) => {
+  const h = await setup(t);
+  await act(async () => { void h.values.actions.loadNotifications(0); });
+  await h.settle(h.lists[0], page([item(1)]));
+  await act(async () => h.streams[0].connect(true));
+  await h.receive(item(3));
+  await h.settle(h.lists[1], page([item(2), item(1)]));
+  assert.deepEqual(h.values.list.notifications.map(({ id }) => id), [3, 2, 1]);
+});
+
 test("initial list hydration retains SSE items that arrived while the request was pending in StrictMode", async (t) => {
   const h = await setup(t, { strict: true });
   await act(async () => { void h.values.actions.loadNotifications(0); });
