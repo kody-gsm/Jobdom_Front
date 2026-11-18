@@ -1,5 +1,5 @@
 import {
-  getAvailablePeriods,
+  CONSULTATION_SCHEDULE,
   type ConsultationKind,
 } from "../../../entities/consultation/index.ts";
 import type { UserRole } from "../../../entities/user/index.ts";
@@ -37,13 +37,9 @@ export const getTeacherAvailablePeriods = (
   kind: ConsultationKind,
   name: string,
 ) => {
+  const periods = CONSULTATION_SCHEDULE.map(({ period }) => period);
   if (kind === "common" || getTeacherWorkspaceVariant(name) === "general") {
-    const periods = getAvailablePeriods("general", `${normalizeTeacherName(name)} 선생님`);
-    if (periods.includes("4교시")) return periods;
-
-    const lunchIndex = periods.indexOf("점심시간");
-    if (lunchIndex === -1) return [...periods, "4교시"];
-    return [...periods.slice(0, lunchIndex), "4교시", ...periods.slice(lunchIndex)];
+    return periods.filter((period) => period !== "저녁시간");
   }
-  return getAvailablePeriods("career", `${normalizeTeacherName(name)} 선생님`);
+  return periods;
 };

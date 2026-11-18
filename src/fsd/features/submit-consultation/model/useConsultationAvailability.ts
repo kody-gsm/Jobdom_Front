@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  getAvailablePeriods,
   getNextAvailableDate,
   getNextWeekdays,
   getSelectableConsultationDates,
@@ -187,6 +188,14 @@ export const useConsultationAvailability = ({
   }, [candidateDates, holidayDates]);
 
   // 교시 행마다 오늘 날짜·선택 가능 교시를 다시 계산하지 않도록 렌더당 한 번만 구한다.
+  let availablePeriods: string[] | null = null;
+  const isInAvailablePeriods = (time: string) => {
+    availablePeriods ??= getAvailablePeriods(
+      counselType,
+      selectedTeacher ? getConsultationTeacherLabel(selectedTeacher.name) : null,
+    );
+    return availablePeriods.includes(time);
+  };
   let todaySelectablePeriods: string[] | null = null;
   const isSelectableToday = (time: string) => {
     todaySelectablePeriods ??= getSelectablePeriods(
@@ -197,7 +206,7 @@ export const useConsultationAvailability = ({
   };
   const isTimeUnavailable = (time: string) =>
     availabilityStatus !== "success" ||
-    (counselType === "general" && time === "4교시") ||
+    !isInAvailablePeriods(time) ||
     (selectedDate === koreaToday && !isSelectableToday(time)) ||
     serverUnavailablePeriods.has(time) ||
     (selectedTeacher !== null &&

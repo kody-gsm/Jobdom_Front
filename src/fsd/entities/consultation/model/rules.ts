@@ -19,10 +19,12 @@ export const TEACHERS: ConsultationTeacher[] = [
 
 const BLOCKED_GENERAL_PERIODS = new Set(["4교시"]);
 const GENERAL_END_PERIODS = new Set(["저녁시간"]);
+const BLOCKED_LATE_PERIODS = new Set(["8교시", "9교시"]);
 const GENERAL_PERIODS = CONSULTATION_SCHEDULE
   .map(({ period }) => period)
   .filter((period) =>
-    !BLOCKED_GENERAL_PERIODS.has(period) && !GENERAL_END_PERIODS.has(period),
+    !BLOCKED_GENERAL_PERIODS.has(period) &&
+    !GENERAL_END_PERIODS.has(period),
   );
 
 export const toConsultationKind = (type: ConsultationType): ConsultationKind =>
@@ -38,9 +40,11 @@ export const getAvailablePeriods = (
 ): string[] => {
   if (!teacher) return [];
   if (type === "general") return GENERAL_PERIODS;
-  // Career teachers are supplied by the backend by role. Keep every slot in
-  // the shared schedule; reservations/locks are applied through the status API.
-  return CONSULTATION_SCHEDULE.map(({ period }) => period);
+  // Career teachers are supplied by the backend by role. Only 임경원 선생님은
+  // 8·9교시 신청을 받지 않는다. 예약/잠금은 별도 상태 API로 판단한다.
+  return CONSULTATION_SCHEDULE
+    .map(({ period }) => period)
+    .filter((period) => teacher !== "임경원 선생님" || !BLOCKED_LATE_PERIODS.has(period));
 };
 
 // Intl 포맷터 생성은 비싸므로 모듈에서 한 번만 만든다.

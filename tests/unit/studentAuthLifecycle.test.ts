@@ -92,8 +92,13 @@ for (const kind of ["signup", "reset"] as const) {
       }
       await view.current.sendCode();
       view.flush();
-      assert.equal(view.current.verificationSecondsLeft, 180);
+      assert.equal(view.current.verificationSecondsLeft, 600);
       browser.advance(180_000);
+      browser.tick();
+      view.flush();
+      assert.equal(view.current.verificationSecondsLeft, 420);
+      assert.equal(view.current.codeExpired, false);
+      browser.advance(420_000);
       await view.current.submit();
       view.flush();
       assert.equal(submissions, 0, "expired verification must never reach the auth endpoint");

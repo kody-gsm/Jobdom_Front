@@ -22,7 +22,7 @@ assert.match(hook, /getResetPasswordEmailErrorMessage\(form\.email\)/);
 assert.match(validation, /getResetPasswordEmailErrorMessage\(values\.email\)/);
 assert.doesNotMatch(`${hook}\n${validation}\n${form}`, /getGsmEmailErrorMessage|s123@gsm\.hs\.kr/);
 assert.match(authErrors, /가입되지 않은 계정입니다\./);
-assert.match(hook, /verificationCountdown\.start\(180\)/);
+assert.match(hook, /verificationCountdown\.start\(600\)/);
 assert.match(hook, /router\.push\("\/login"\)/);
 assert.match(source, /인증코드가 만료되었습니다\. 재발송해주세요\./);
 

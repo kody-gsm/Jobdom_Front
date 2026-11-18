@@ -113,7 +113,7 @@ export const useSignupForm = () => {
         tone: "success",
         message: `${requestedEmail}로 인증코드를 발송했습니다. 메일함을 확인해주세요.`,
       });
-      verificationCountdown.start(180);
+      verificationCountdown.start(600);
       resendCountdown.start(2);
       setErrors((current) => ({ ...current, email: undefined, verificationCode: undefined }));
       setErrorField(null);

@@ -11,9 +11,13 @@ import { useSignupForm } from "../model/useSignupForm.ts";
 
 export const SignupForm = () => {
   const signupForm = useSignupForm();
-  const termsTriggerRef = useRef<HTMLButtonElement>(null);
-  const privacyTriggerRef = useRef<HTMLButtonElement>(null);
+  const consentReturnFocusRef = useRef<HTMLElement | null>(null);
   const activeConsent = signupForm.activeConsent;
+
+  const openConsent = (document: "terms" | "privacy", trigger: HTMLElement) => {
+    consentReturnFocusRef.current = trigger;
+    signupForm.openConsent(document);
+  };
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -114,17 +118,18 @@ export const SignupForm = () => {
                 <input
                   type="checkbox"
                   checked={signupForm.form.termsAccepted}
-                  disabled={!signupForm.canAgreeToTerms}
-                  onChange={(event) => signupForm.updateConsent("termsAccepted", event.target.checked)}
-                  className="mt-0.5 h-5 w-5 shrink-0 accent-brand disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-brand"
+                  onChange={(event) => {
+                    if (!event.target.checked) signupForm.updateConsent("termsAccepted", false);
+                    openConsent("terms", event.currentTarget);
+                  }}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-brand focus-visible:ring-2 focus-visible:ring-brand"
                 />
                 <span className="min-w-0 break-keep">이용약관 동의 <strong className="text-[#E53935]">(필수)</strong></span>
               </label>
               <button
-                ref={termsTriggerRef}
                 type="button"
                 aria-label="이용약관 자세히 보기"
-                onClick={() => signupForm.openConsent("terms")}
+                onClick={(event) => openConsent("terms", event.currentTarget)}
                 className="min-h-11 self-start px-1 text-sm font-semibold text-brand-hover transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:shrink-0"
               >
                 자세히 보기
@@ -143,17 +148,18 @@ export const SignupForm = () => {
                 <input
                   type="checkbox"
                   checked={signupForm.form.privacyAccepted}
-                  disabled={!signupForm.canAgreeToPrivacy}
-                  onChange={(event) => signupForm.updateConsent("privacyAccepted", event.target.checked)}
-                  className="mt-0.5 h-5 w-5 shrink-0 accent-brand disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-brand"
+                  onChange={(event) => {
+                    if (!event.target.checked) signupForm.updateConsent("privacyAccepted", false);
+                    openConsent("privacy", event.currentTarget);
+                  }}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-brand focus-visible:ring-2 focus-visible:ring-brand"
                 />
                 <span className="min-w-0 break-keep">개인정보 수집·이용 동의 <strong className="text-[#E53935]">(필수)</strong></span>
               </label>
               <button
-                ref={privacyTriggerRef}
                 type="button"
                 aria-label="개인정보 수집·이용 자세히 보기"
-                onClick={() => signupForm.openConsent("privacy")}
+                onClick={(event) => openConsent("privacy", event.currentTarget)}
                 className="min-h-11 self-start px-1 text-sm font-semibold text-brand-hover transition-colors hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand sm:shrink-0"
               >
                 자세히 보기
@@ -192,7 +198,7 @@ export const SignupForm = () => {
           onAgree={() => signupForm.agreeToConsent(activeConsent)}
           onReadToEnd={() => signupForm.markConsentRead(activeConsent)}
           hasReadToEnd={activeConsent === "terms" ? signupForm.canAgreeToTerms : signupForm.canAgreeToPrivacy}
-          returnFocusRef={activeConsent === "terms" ? termsTriggerRef : privacyTriggerRef}
+          returnFocusRef={consentReturnFocusRef}
         />
       ) : null}
     </form>
