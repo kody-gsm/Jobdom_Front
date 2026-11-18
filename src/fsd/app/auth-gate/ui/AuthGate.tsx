@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getSession, recordPageView } from "@fsd/entities/user";
-import { RoleTutorialGate } from "@fsd/features/role-tutorial";
+import { isLocalTutorialPreview, LocalTutorialPreview, RoleTutorialGate } from "@fsd/features/role-tutorial";
 import { shouldRenderAuthChildren, type AuthGateStatus } from "../model/authGatePresentation.ts";
 import { getAuthRedirect } from "../model/routePolicy.ts";
 
@@ -11,10 +11,16 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [status, setStatus] = useState<AuthGateStatus>("checking");
+  const [isPreview, setIsPreview] = useState(false);
   const lastVisit = useRef("");
 
   useEffect(() => {
     const checkAccess = () => {
+      if (isLocalTutorialPreview()) {
+        setIsPreview(true);
+        setStatus("allowed");
+        return;
+      }
       const session = getSession();
       const redirect = getAuthRedirect(pathname, session?.role ?? null);
       if (redirect) {
@@ -35,5 +41,6 @@ export const AuthGate = ({ children }: { children: React.ReactNode }) => {
   }, [pathname, router]);
 
   if (!shouldRenderAuthChildren(status)) return null;
+  if (isPreview) return <LocalTutorialPreview>{children}</LocalTutorialPreview>;
   return <RoleTutorialGate>{children}</RoleTutorialGate>;
 };

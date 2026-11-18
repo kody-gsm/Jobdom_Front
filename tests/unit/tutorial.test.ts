@@ -58,7 +58,15 @@ assert.ok(!weeSteps.some((step) => step.route === "/teacher/recruit" || step.rou
 
 const consultationSteps = getTutorialSteps("STUDENT").filter((step) => step.route === "/counsel");
 assert.equal(consultationSteps.at(-1)?.target, "consultation-submit");
-assert.equal(consultationSteps.length, 5);
+assert.deepEqual(consultationSteps.slice(1, 4).map((step) => [step.target, step.action.type]), [
+  ["consultation-title", "filled"],
+  ["consultation-category", "filled"],
+  ["consultation-body", "filled"],
+]);
+assert.equal(consultationSteps.length, 7);
+const studentNotifications = getTutorialSteps("STUDENT").find((step) => step.id === "student-notifications");
+assert.deepEqual(studentNotifications?.action, { type: "route", path: "/" });
+assert.equal(getTutorialSteps("STUDENT").find((step) => step.id === "student-profile")?.route, "/");
 
 assert.deepEqual(unionRects([]), null);
 assert.deepEqual(

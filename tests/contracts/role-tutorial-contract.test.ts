@@ -34,12 +34,18 @@ assert.doesNotMatch(tutorial, /9999px|boxShadow/);
 
 // 완료 저장이 끝나기 전에는 튜토리얼을 닫지 않고, 실패하면 다시 시도할 수 있다.
 assert.match(tutorial, /await onComplete\(\)/);
-assert.match(tutorial, /disabled=\{isCompleting \|\| mustNavigate\}/);
+assert.match(tutorial, /disabled=\{isCompleting \|\| mustNavigate \|\| mustFill\}/);
+assert.match(tutorial, /const mustFill = step\.action\.type === "filled" && status !== "missing"/);
 // 메뉴·링크를 눌러 이동하는 단계는 '다음'으로 건너뛰어 안내가 화면을 대신 바꾸지 않는다. (항목을 못 찾으면 넘어갈 수 있음)
 assert.match(tutorial, /const mustNavigate = actionPath !== null && status !== "missing"/);
 assert.match(tutorial, /role="alert"/);
 assert.match(tutorial, /다시 시도/);
-assert.doesNotMatch(tutorial, /건너뛰기|skip/i);
+// 건너뛰기는 확인을 거친 뒤 완료로 저장하며, 취소하면 현 단계에 남는다.
+assert.match(tutorial, /건너뛰기/);
+assert.match(tutorial, /정말 튜토리얼을 건너뛸까요/);
+assert.match(tutorial, /프로필.*나중에/);
+assert.match(tutorial, /onClick=\{\(\) => setSkipOpen\(false\)\}/);
+assert.match(tutorial, /onClick=\{\(\) => void complete\(\)\}/);
 
 // 프로필에서 언제든 다시 볼 수 있다.
 assert.match(read("src/fsd/pages/profile/ui/ProfilePage.tsx"), /<TutorialReplayButton \/>/);
