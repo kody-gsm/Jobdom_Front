@@ -24,7 +24,7 @@ assert.equal(toCounselingCategory("career"), "취업");
 assert.equal(toCounselingCategory("general"), "기타");
 assert.deepEqual(getAvailablePeriods("career", "임경원 선생님"), [
   "1교시", "2교시", "3교시", "4교시", "점심시간", "5교시",
-  "6교시", "7교시", "8교시", "9교시", "저녁시간",
+  "6교시", "7교시", "저녁시간",
 ]);
 assert.deepEqual(getAvailablePeriods("career", "김권예소 선생님"), [
   "1교시", "2교시", "3교시", "4교시", "점심시간", "5교시", "6교시", "7교시", "8교시", "9교시", "저녁시간",
@@ -35,15 +35,16 @@ assert.deepEqual(getAvailablePeriods("career", "새로 추가된 선생님"), [
 assert.deepEqual(getAvailablePeriods("career", null), []);
 assert.deepEqual(getAvailablePeriods("general", null), []);
 assert.deepEqual(getAvailablePeriods("general", "일반 교사"), [
-  "1교시", "2교시", "3교시", "점심시간", "5교시", "6교시", "7교시", "8교시", "9교시",
+  "1교시", "2교시", "3교시", "점심시간", "5교시", "6교시", "7교시",
 ]);
+assert.deepEqual(getAvailablePeriods("general", "강우빈 선생님"), getAvailablePeriods("general", "일반 교사"));
 assert.deepEqual(
   getSelectablePeriods("general", "일반 교사", new Date("2026-10-29T16:39:00+09:00")),
-  ["8교시", "9교시"],
+  [],
 );
 assert.deepEqual(
   getSelectablePeriods("general", "일반 교사", new Date("2026-10-29T16:40:00+09:00")),
-  ["9교시"],
+  [],
 );
 assert.deepEqual(
   getSelectablePeriods("general", "일반 교사", new Date("2026-10-29T17:40:00+09:00")),

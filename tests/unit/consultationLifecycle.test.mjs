@@ -34,7 +34,7 @@ const teacher = { id: 3, name: "임경원" };
 const key = getConsultationDraftStorageKey("12");
 const savedDraft = {
   title: "진로 상담", content: "포트폴리오 상담", category: "취업",
-  teacherId: 3, date: "2026-11-02", period: "9교시",
+  teacherId: 3, date: "2026-11-02", period: "7교시",
 };
 let environment;
 let calls;
@@ -78,11 +78,30 @@ const readyForm = async (type = "career") => {
   await environment.settle();
   assert.equal(form.value.availabilityStatus, "success");
   if (form.value.selectedTime === null) {
-    form.value.toggleTime("9교시");
+    form.value.toggleTime("7교시");
     await environment.settle();
   }
   return form;
 };
+
+for (const [type, selectedTeacher, blockedPeriod] of [
+  ["career", teacher, "9교시"],
+  ["general", { id: 4, name: "강우빈" }, "8교시"],
+]) {
+  test(`${type}: saved ${blockedPeriod} is not restored or selectable`, async () => {
+    writeConsultationDraft(environment.storage, key, type, {
+      ...savedDraft, teacherId: selectedTeacher.id, period: blockedPeriod,
+    });
+    const form = mount(type);
+    teachers.resolve([selectedTeacher]);
+    await environment.settle();
+    assert.equal(form.value.selectedTime, null);
+    assert.equal(form.value.isTimeUnavailable(blockedPeriod), true);
+    form.value.toggleTime(blockedPeriod);
+    await environment.settle();
+    assert.equal(form.value.selectedTime, null);
+  });
+}
 
 test("A1: clicking the current tab preserves loaded teachers, selection and category", async () => {
   seedDraft();
@@ -108,12 +127,12 @@ test("A2: slow teachers cannot erase the immutable draft or new text edits", asy
   const pending = readConsultationDrafts(environment.storage, key).career;
   assert.equal(pending.teacherId, 3);
   assert.equal(pending.date, "2026-11-02");
-  assert.equal(pending.period, "9교시");
+  assert.equal(pending.period, "7교시");
   teachers.resolve([teacher]);
   await environment.settle();
   assert.equal(form.value.title, "수정한 상담 제목");
   assert.equal(form.value.selectedTeacher?.id, 3);
-  assert.equal(form.value.selectedTime, "9교시");
+  assert.equal(form.value.selectedTime, "7교시");
   await advance(400);
   assert.deepEqual(readConsultationDrafts(environment.storage, key).career, {
     ...savedDraft, title: "수정한 상담 제목",
@@ -127,10 +146,10 @@ test("A2: slow slot lookup does not autosave away the saved period", async () =>
   teachers.resolve([teacher]);
   await environment.settle();
   await advance(500);
-  assert.equal(readConsultationDrafts(environment.storage, key).career.period, "9교시");
+  assert.equal(readConsultationDrafts(environment.storage, key).career.period, "7교시");
   slots.resolve([]);
   await environment.settle();
-  assert.equal(form.value.selectedTime, "9교시");
+  assert.equal(form.value.selectedTime, "7교시");
 });
 
 for (const condition of ["pending teachers", "failed teachers", "failed slots"]) {
@@ -252,23 +271,23 @@ test("A9: explicit availability retry bypasses cache and applies current locks",
   form.value.retryAvailability();
   await environment.settle();
   assert.equal(statusCalls().at(-1)?.init?.cache, "no-store");
-  slots.resolve([{ teacherId: 3, date: "2026-11-02", period: "9교시", state: "LOCKED", available: false }]);
+  slots.resolve([{ teacherId: 3, date: "2026-11-02", period: "7교시", state: "LOCKED", available: false }]);
   await environment.settle();
-  assert.equal(form.value.isTimeUnavailable("9교시"), true);
+  assert.equal(form.value.isTimeUnavailable("7교시"), true);
   assert.equal(form.value.selectedTime, null);
 });
 
 test("submit preserves the POST contract and invalidates only its consultation kind", async () => {
   const form = await readyForm("general");
   assert.equal(form.value.isTimeUnavailable("4교시"), true);
-  assert.equal(form.value.isTimeUnavailable("9교시"), false);
-  assert.equal(form.value.selectedTime, "9교시");
+  assert.equal(form.value.isTimeUnavailable("7교시"), false);
+  assert.equal(form.value.selectedTime, "7교시");
   await form.value.handleSubmit(event);
   const posted = postCalls()[0];
   assert.equal(posted?.path, "/student/common");
   assert.deepEqual(JSON.parse(String(posted?.init?.body)), {
     title: "진로 상담", content: "포트폴리오 상담", category: "취업",
-    teacherId: 3, date: "2026-11-02", period: "9교시",
+    teacherId: 3, date: "2026-11-02", period: "7교시",
   });
   assert.deepEqual(posted?.init?.invalidateCache, ["/student/common", "/teacher/common"]);
 });
@@ -329,7 +348,7 @@ test("A2: manual date selection wins while the saved teacher finishes loading", 
 test("A2: switching tabs during hydration preserves text and rejects the old teacher response", async () => {
   seedDraft();
   writeConsultationDraft(environment.storage, key, "general", {
-    ...savedDraft, title: "일반 상담", teacherId: 4, date: "2026-11-03", period: "8교시",
+    ...savedDraft, title: "일반 상담", teacherId: 4, date: "2026-11-03", period: "6교시",
   });
   const oldTeachers = teachers;
   const form = mount();
@@ -342,7 +361,7 @@ test("A2: switching tabs during hydration preserves text and rejects the old tea
   const career = readConsultationDrafts(environment.storage, key).career;
   assert.equal(career.content, "교사 조회 중 수정한 내용");
   assert.equal(career.teacherId, 3);
-  assert.equal(career.period, "9교시");
+  assert.equal(career.period, "7교시");
   teachers.resolve([{ id: 4, name: "일반 교사" }]);
   await environment.settle();
   oldTeachers.resolve([teacher]);
@@ -351,7 +370,7 @@ test("A2: switching tabs during hydration preserves text and rejects the old tea
   assert.equal(form.value.title, "일반 상담");
   assert.equal(form.value.selectedTeacher?.id, 4);
   assert.equal(form.value.selectedDate, "2026-11-03");
-  assert.equal(form.value.selectedTime, "8교시");
+  assert.equal(form.value.selectedTime, "6교시");
 });
 
 test("availability response for a superseded date cannot lock the new selection", async () => {
@@ -366,13 +385,13 @@ test("availability response for a superseded date cannot lock the new selection"
   await environment.settle();
   slots.resolve([]);
   await environment.settle();
-  form.value.toggleTime("9교시");
+  form.value.toggleTime("7교시");
   await environment.settle();
-  oldSlots.resolve([{ teacherId: 3, date: "2026-11-02", period: "9교시", state: "LOCKED", available: false }]);
+  oldSlots.resolve([{ teacherId: 3, date: "2026-11-02", period: "7교시", state: "LOCKED", available: false }]);
   await environment.settle();
   assert.equal(form.value.selectedDate, "2026-11-03");
-  assert.equal(form.value.selectedTime, "9교시");
-  assert.equal(form.value.isTimeUnavailable("9교시"), false);
+  assert.equal(form.value.selectedTime, "7교시");
+  assert.equal(form.value.isTimeUnavailable("7교시"), false);
 });
 
 test("failed saved-date lookup retains the period until a no-store retry succeeds", async () => {
@@ -384,13 +403,13 @@ test("failed saved-date lookup retains the period until a no-store retry succeed
   slots.reject(new Error("offline"));
   await environment.settle();
   await advance(500);
-  assert.equal(readConsultationDrafts(environment.storage, key).career.period, "9교시");
+  assert.equal(readConsultationDrafts(environment.storage, key).career.period, "7교시");
   slots = null;
   form.value.retryAvailability();
   await environment.settle();
   assert.equal(statusCalls().at(-1)?.init?.cache, "no-store");
   assert.equal(form.value.selectedDate, "2026-11-02");
-  assert.equal(form.value.selectedTime, "9교시");
+  assert.equal(form.value.selectedTime, "7교시");
 });
 
 test("successful POST after unmount cannot schedule navigation or a success toast", async () => {
