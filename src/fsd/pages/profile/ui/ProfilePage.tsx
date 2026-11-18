@@ -7,7 +7,7 @@ import { ProfileConsultations } from "@fsd/widgets/profile-consultations";
 import { StudentHeader } from "@fsd/widgets/student-header";
 import { TeacherHeader } from "@fsd/widgets/teacher-header";
 import { useProfilePage } from "../model/useProfilePage.ts";
-import { StudentWithdrawalSection } from "./StudentWithdrawalSection.tsx";
+import { StudentAccountActions } from "./StudentAccountActions.tsx";
 
 export const ProfilePage = () => {
   const {
@@ -103,7 +103,7 @@ export const ProfilePage = () => {
               onCancel={handleCancel}
               onSaved={() => void retryReservations()}
             />
-            {userRole === "STUDENT" ? <StudentWithdrawalSection /> : null}
+            {userRole === "STUDENT" ? <StudentAccountActions /> : null}
           </div>
         ) : null}
       </main>

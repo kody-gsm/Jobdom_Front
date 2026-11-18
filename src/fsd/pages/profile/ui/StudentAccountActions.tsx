@@ -1,24 +1,45 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { logout } from "@fsd/features/logout";
 import { ContentCard } from "@fsd/shared/ui";
 
-export const StudentWithdrawalSection = () => {
+export const StudentAccountActions = () => {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const router = useRouter();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } finally {
+      router.replace("/login");
+    }
+  };
 
   return (
     <ContentCard className="p-8">
       <h2 className="text-lg font-bold text-ink">계정 관리</h2>
-      <p className="mt-2 text-sm leading-6 text-muted">
-        회원 탈퇴는 계정 사용을 종료하는 절차입니다.
-      </p>
-      <button
-        type="button"
-        onClick={() => dialogRef.current?.showModal()}
-        className="mt-5 inline-flex min-h-11 items-center rounded-xl border border-[#E9C8C5] px-4 text-sm font-bold text-[#B4443D] transition-colors hover:bg-[#FFF7F5]"
-      >
-        회원 탈퇴
-      </button>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => void handleLogout()}
+          disabled={isLoggingOut}
+          className="min-h-12 rounded-xl border border-[#DDE2E7] px-5 text-sm font-bold text-ink transition-colors hover:bg-surface disabled:cursor-wait disabled:opacity-60"
+        >
+          {isLoggingOut ? "로그아웃 중…" : "로그아웃"}
+        </button>
+        <button
+          type="button"
+          onClick={() => dialogRef.current?.showModal()}
+          className="min-h-12 rounded-xl border border-[#E9C8C5] px-5 text-sm font-bold text-[#B4443D] transition-colors hover:bg-[#FFF7F5]"
+        >
+          회원 탈퇴
+        </button>
+      </div>
 
       <dialog
         ref={dialogRef}
