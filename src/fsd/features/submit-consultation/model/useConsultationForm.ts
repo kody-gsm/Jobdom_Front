@@ -30,6 +30,7 @@ import type {
   ConsultationDraftSnapshot,
   ConsultationDraftStorage,
 } from "./consultationDraft.ts";
+import { isUnavailableSlotError } from "./slotAvailability.ts";
 import { useConsultationAvailability } from "./useConsultationAvailability.ts";
 
 export type ConsultationToast = {
@@ -76,9 +77,6 @@ const focusConsultationError = (target: ConsultationErrorTarget) => {
   });
 };
 
-const isUnavailableSlotError = (error: ApiError) =>
-  /예약한 시간|누군가 예약|이미 예약|잠긴 날짜|잠긴 시간/.test(error.message);
-
 export const useConsultationForm = (initialType: ConsultationType) => {
   const router = useRouter();
   const [counselType, setCounselType] = useState(initialType);
@@ -121,6 +119,7 @@ export const useConsultationForm = (initialType: ConsultationType) => {
     isTimeUnavailable,
     clearPeriodSelection,
     markUnavailableSlot,
+    refreshAvailabilityQuietly,
     reset: resetAvailability,
   } = useConsultationAvailability({ counselType, selectedTeacher });
 
@@ -406,6 +405,8 @@ export const useConsultationForm = (initialType: ConsultationType) => {
         selectedTime
       ) {
         markUnavailableSlot(teacherId, selectedDate, selectedTime);
+        // 그 사이 선생님이 잠근 다른 교시도 함께 반영한다.
+        refreshAvailabilityQuietly();
         setErrorTarget("period");
         focusConsultationError("period");
       }
