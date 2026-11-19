@@ -12,11 +12,18 @@ assert.deepEqual(getTeacherAvailablePeriods("common", "일반 교사"), generalT
 assert.deepEqual(getTeacherAvailablePeriods("common", "임경원"), generalTeacherPeriods);
 assert.deepEqual(getTeacherAvailablePeriods("course", "일반 교사"), generalTeacherPeriods);
 assert.deepEqual(getTeacherAvailablePeriods("course", "임경원"), [...generalTeacherPeriods, "8교시", "9교시", "저녁시간"]);
+// 학생은 위클래스 8·9교시도 신청할 수 있으므로 그 주에 신청이 있는 늦은 교시는 시간표에 남긴다.
+assert.deepEqual(getTeacherAvailablePeriods("common", "일반 교사", new Set(["8교시"])), [...generalTeacherPeriods, "8교시"]);
+assert.deepEqual(getTeacherAvailablePeriods("common", "일반 교사", new Set(["9교시", "3교시"])), [...generalTeacherPeriods, "9교시"]);
+assert.deepEqual(getTeacherAvailablePeriods("common", "일반 교사", new Set(["저녁시간"])), generalTeacherPeriods);
+assert.deepEqual(getTeacherAvailablePeriods("course", "임경원", new Set(["8교시"])), [...generalTeacherPeriods, "8교시", "9교시", "저녁시간"]);
 
 const read = (path: string) => readFileSync(path, "utf8");
 const route = read("app/teacher/page.tsx");
 const page = read("src/fsd/pages/teacher/ui/TeacherPage.tsx");
 const teacherHeader = read("src/fsd/widgets/teacher-header/ui/TeacherHeader.tsx");
+assert.match(page, /getTeacherAvailablePeriods\(kind, teacherName, weekBookedPeriods\)/);
+assert.match(page, /\.filter\(\(item\) => weekKeys\.has\(item\.date\)\)\s*\.map\(\(item\) => formatPeriod\(item\.period\)\)/);
 
 assert.match(route, /@fsd\/pages\/teacher/);
 assert.doesNotMatch(route, /useState|getTeacherConsultations|approveConsultation/);

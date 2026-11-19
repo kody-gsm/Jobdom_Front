@@ -33,16 +33,21 @@ export const getTeacherWorkspaceVariant = (
 export const canManageHomeBanner = (role: UserRole | null) =>
   role === "TEACHER" || role === "WEE_TEACHER";
 
-// 위클래스 시간표는 7교시까지만 보여준다. 4교시는 학생 신청은 막지만 교사 시간표에는 남긴다.
-const GENERAL_TEACHER_HIDDEN_PERIODS = new Set(["8교시", "9교시", "저녁시간"]);
+const GENERAL_TEACHER_LATE_PERIODS = new Set(["8교시", "9교시"]);
 
+/**
+ * 위클래스 시간표는 7교시까지만 보여준다. 학생은 위클래스 8·9교시도 신청할 수 있으므로(#226)
+ * 보고 있는 주에 그 교시 신청이 있으면 시간표에서 빠지지 않도록 그 교시만 남긴다.
+ */
 export const getTeacherAvailablePeriods = (
   kind: ConsultationKind,
   name: string,
+  bookedPeriods: ReadonlySet<string> = new Set(),
 ) => {
   const periods = CONSULTATION_SCHEDULE.map(({ period }) => period);
   if (kind === "common" || getTeacherWorkspaceVariant(name) === "general") {
-    return periods.filter((period) => !GENERAL_TEACHER_HIDDEN_PERIODS.has(period));
+    return periods.filter((period) =>
+      period !== "저녁시간" && (!GENERAL_TEACHER_LATE_PERIODS.has(period) || bookedPeriods.has(period)));
   }
   return periods;
 };

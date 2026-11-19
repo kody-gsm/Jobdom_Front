@@ -98,16 +98,15 @@ test("career: saved 9교시 is not restored or selectable for 임경원", async 
   assert.equal(form.value.selectedTime, null);
 });
 
-// 위클래스 상담은 7교시까지만 받으므로 저장된 8교시도 복원하거나 고를 수 없다.
-test("general: saved 8교시 is not restored or selectable for WEE counseling", async () => {
+test("general: saved 8교시 remains selectable for WEE counseling", async () => {
   writeConsultationDraft(environment.storage, key, "general", {
     ...savedDraft, teacherId: 4, period: "8교시",
   });
   const form = mount("general");
   teachers.resolve([{ id: 4, name: "강우빈" }]);
   await environment.settle();
-  assert.equal(form.value.isTimeUnavailable("8교시"), true);
-  assert.equal(form.value.selectedTime, null);
+  assert.equal(form.value.isTimeUnavailable("8교시"), false);
+  assert.equal(form.value.selectedTime, "8교시");
 });
 
 test("A1: clicking the current tab preserves loaded teachers, selection and category", async () => {
@@ -283,21 +282,6 @@ test("A9: explicit availability retry bypasses cache and applies current locks",
   assert.equal(form.value.isTimeUnavailable("7교시"), true);
   assert.equal(form.value.selectedTime, null);
 });
-
-for (const period of ["8교시", "9교시"]) {
-  test(`general consultation rejects a saved ${period} on a future date`, async () => {
-    writeConsultationDraft(environment.storage, key, "general", { ...savedDraft, period });
-    const form = mount("general");
-    teachers.resolve([teacher]);
-    await environment.settle();
-    assert.equal(form.value.selectedDate, savedDraft.date);
-    assert.equal(form.value.selectedTime, null);
-    assert.equal(form.value.isTimeUnavailable(period), true);
-    form.value.toggleTime(period);
-    await environment.settle();
-    assert.equal(form.value.selectedTime, null);
-  });
-}
 
 test("submit preserves the POST contract and invalidates only its consultation kind", async () => {
   const form = await readyForm("general");
