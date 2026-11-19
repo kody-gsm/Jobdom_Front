@@ -166,6 +166,37 @@ export const useConsultationAvailability = ({
 
   const retryAvailability = useCallback(() => loadAvailability(true), [loadAvailability]);
 
+  // 선생님이 그 사이 잠근 시간을 반영하되, 고른 교시가 여전히 가능하면 선택과 화면 상태는 유지한다.
+  const refreshAvailabilityQuietly = useCallback(() => {
+    const teacherId = selectedTeacher?.id ?? null;
+    const date = selectedDate;
+    if (teacherId === null || date === null) return;
+    const requestVersion = availabilityRequestVersion.current;
+    void getConsultationSlotStatus(toConsultationKind(counselType), teacherId, date, { cache: "no-store" })
+      .then((items) => {
+        if (availabilityRequestVersion.current !== requestVersion) return;
+        const unavailable = getUnavailablePeriods(items);
+        setServerUnavailablePeriods(unavailable);
+        setSelectedTime((current) => current !== null && unavailable.has(current) ? null : current);
+      })
+      .catch(() => {
+        // 조용한 재확인이 실패하면 기존 결과를 유지한다. 신청할 때 서버가 다시 확인한다.
+      });
+  }, [counselType, selectedDate, selectedTeacher]);
+
+  useEffect(() => {
+    if (availabilityStatus !== "success") return;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshAvailabilityQuietly();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
+  }, [availabilityStatus, refreshAvailabilityQuietly]);
+
   useEffect(() => {
     loadAvailability();
     return () => {
@@ -261,6 +292,7 @@ export const useConsultationAvailability = ({
     isTimeUnavailable,
     clearPeriodSelection,
     markUnavailableSlot,
+    refreshAvailabilityQuietly,
     reset,
   };
 };

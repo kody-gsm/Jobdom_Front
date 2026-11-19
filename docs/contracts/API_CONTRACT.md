@@ -73,6 +73,12 @@
 - 서버는 호출이 있던 날짜만 `daily`로 내려주므로 화면은 빈 날짜를 0으로 채워 일별 차트를 그린다. 인증 실패나 매핑되지 않은 요청은 `UNMATCHED` 경로로 집계된다.
 - 401/403은 관리자 권한 안내, 그 외 실패는 오류와 재조회를 제공한다. 형식이 맞지 않는 응답은 오류로 처리한다.
 
+## Consultation slot locks
+
+- 학생 상담 신청 화면은 선생님·날짜를 고를 때 `GET /student/{course|common}/status?teacherId={id}&date=YYYY-MM-DD`를 호출하고 `available: false`인 교시를 `예약 불가`로 막는다. 서버는 선생님의 하루 잠금, 매주 반복 잠금(`/teacher/{kind}/lock/weekly`), 휴업일 잠금, 이미 찬 시간을 모두 이 응답에 반영한다.
+- 학생이 다른 화면이나 탭에 있다가 돌아오면 같은 API를 `cache: "no-store"`로 다시 조회한다. 고른 교시가 여전히 가능하면 선택을 유지하고, 그 사이 잠기거나 찬 교시만 선택에서 뺀다.
+- 신청(`POST /student/{kind}`)이 `423 RESERVATION_LOCKED` 또는 `409 RESERVATION_CONFLICT`로 거절되면 그 교시를 막고, 같은 날의 상태를 다시 조회한다. 문구가 바뀌어도 동작하도록 오류 코드를 먼저 확인하고, 코드가 없을 때만 문구로 판단한다.
+
 ## Form attachment download
 
 - 학생의 제출 내역과 교사의 응답 조회 화면은 답변의 `fileId`로 `GET /form/file/{fileId}`를 요청한다. 공유 클라이언트가 API base(`/backend` 등)를 붙인다.
