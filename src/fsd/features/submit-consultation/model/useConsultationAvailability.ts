@@ -166,6 +166,37 @@ export const useConsultationAvailability = ({
 
   const retryAvailability = useCallback(() => loadAvailability(true), [loadAvailability]);
 
+  // 선생님이 그 사이 잠근 시간을 반영하되, 고른 교시가 여전히 가능하면 선택과 화면 상태는 유지한다.
+  const refreshAvailabilityQuietly = useCallback(() => {
+    const teacherId = selectedTeacher?.id ?? null;
+    const date = selectedDate;
+    if (teacherId === null || date === null) return;
+    const requestVersion = availabilityRequestVersion.current;
+    void getConsultationSlotStatus(toConsultationKind(counselType), teacherId, date, { cache: "no-store" })
+      .then((items) => {
+        if (availabilityRequestVersion.current !== requestVersion) return;
+        const unavailable = getUnavailablePeriods(items);
+        setServerUnavailablePeriods(unavailable);
+        setSelectedTime((current) => current !== null && unavailable.has(current) ? null : current);
+      })
+      .catch(() => {
+        // 조용한 재확인이 실패하면 기존 결과를 유지한다. 신청할 때 서버가 다시 확인한다.
+      });
+  }, [counselType, selectedDate, selectedTeacher]);
+
+  useEffect(() => {
+    if (availabilityStatus !== "success") return;
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshAvailabilityQuietly();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
+  }, [availabilityStatus, refreshAvailabilityQuietly]);
+
   useEffect(() => {
     loadAvailability();
     return () => {
@@ -188,6 +219,14 @@ export const useConsultationAvailability = ({
   }, [candidateDates, holidayDates]);
 
   // 교시 행마다 오늘 날짜·선택 가능 교시를 다시 계산하지 않도록 렌더당 한 번만 구한다.
+  let availablePeriods: string[] | null = null;
+  const isInAvailablePeriods = (time: string) => {
+    availablePeriods ??= getAvailablePeriods(
+      counselType,
+      selectedTeacher ? getConsultationTeacherLabel(selectedTeacher.name) : null,
+    );
+    return availablePeriods.includes(time);
+  };
   let todaySelectablePeriods: string[] | null = null;
   const isSelectableToday = (time: string) => {
     todaySelectablePeriods ??= getSelectablePeriods(
@@ -198,10 +237,7 @@ export const useConsultationAvailability = ({
   };
   const isTimeUnavailable = (time: string) =>
     availabilityStatus !== "success" ||
-    !getAvailablePeriods(
-      counselType,
-      selectedTeacher ? getConsultationTeacherLabel(selectedTeacher.name) : null,
-    ).includes(time) ||
+    !isInAvailablePeriods(time) ||
     (selectedDate === koreaToday && !isSelectableToday(time)) ||
     serverUnavailablePeriods.has(time) ||
     (selectedTeacher !== null &&
@@ -256,6 +292,7 @@ export const useConsultationAvailability = ({
     isTimeUnavailable,
     clearPeriodSelection,
     markUnavailableSlot,
+    refreshAvailabilityQuietly,
     reset,
   };
 };

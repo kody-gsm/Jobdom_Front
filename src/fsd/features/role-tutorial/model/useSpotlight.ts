@@ -40,12 +40,12 @@ const scrollTargetIntoView = (elements: HTMLElement[], isCompact: boolean) => {
   if (rect.top >= headerOffset && rect.top + rect.height <= visibleBottom) return;
   const centered = (window.innerHeight - rect.height) / 2;
   const desiredTop = isCompact || rect.height > window.innerHeight - headerOffset * 2 ? headerOffset : Math.max(headerOffset, centered);
-  window.scrollTo({ top: window.scrollY + rect.top - desiredTop, behavior: "smooth" });
+  window.scrollTo({ top: window.scrollY + rect.top - desiredTop, behavior: "auto" });
 };
 
 // 강조 위치와 카드 위치는 React 상태를 거치지 않고 애니메이션 프레임에서 DOM에 바로 쓴다.
 // 스크롤할 때마다 다시 렌더링하지 않으므로 끊기지 않고, 값이 바뀔 때만 다시 그린다.
-export const useSpotlight = (targets: readonly TutorialTarget[], enabled: boolean, isCompact: boolean, refs: SpotlightRefs) => {
+export const useSpotlight = (targets: readonly TutorialTarget[], stepId: string, enabled: boolean, isCompact: boolean, emphasize: boolean, refs: SpotlightRefs) => {
   // 같은 단계인지 문자열로 비교해서 배열이 새로 만들어져도 다시 시작하지 않는다.
   const target = targets.join(" ");
   const [state, setState] = useState<{ target: string | null; status: SpotlightStatus }>({ target: null, status: "searching" });
@@ -61,6 +61,9 @@ export const useSpotlight = (targets: readonly TutorialTarget[], enabled: boolea
     let hasScrolled = false;
     let lastKey = "";
     let status: SpotlightStatus | null = null;
+    let pinnedPosition: { top: number; left: number } | null = null;
+    let pinnedSize = "";
+    let emphasized: HTMLElement[] = [];
     const startedAt = Date.now();
 
     const report = (next: SpotlightStatus) => {
@@ -75,6 +78,22 @@ export const useSpotlight = (targets: readonly TutorialTarget[], enabled: boolea
         elements = findTargetElements(target.split(" ") as TutorialTarget[]);
         primary = elements.filter((element) => element.dataset.tutorialTarget?.split(" ").includes(primaryTarget));
         header = document.querySelector<HTMLElement>("header");
+        let nextEmphasized: HTMLElement[] = [];
+        if (emphasize) {
+          nextEmphasized = primary.flatMap((element) => {
+            const isContentStep = primaryTarget === "consultation-title" || primaryTarget === "consultation-category" || primaryTarget === "consultation-body";
+            const selector = isContentStep ? "input, textarea, button" : "a, button, [role='button']";
+            if (element.matches(selector)) return [element];
+            const controls = Array.from(element.querySelectorAll<HTMLElement>(selector))
+              .filter((control) => control.getClientRects().length > 0 && !control.matches(":disabled, [aria-disabled='true']"));
+            return isContentStep || controls.length <= 3 ? controls : [];
+          });
+        }
+        emphasized.filter((element) => !nextEmphasized.includes(element))
+          .forEach((element) => element.removeAttribute("data-tutorial-attention"));
+        nextEmphasized.filter((element) => !emphasized.includes(element))
+          .forEach((element) => element.setAttribute("data-tutorial-attention", ""));
+        emphasized = nextEmphasized;
       }
       count += 1;
       // 함께 열어 둔 영역이 있어도 스크롤과 설명 카드 위치는 이 단계의 주 대상 기준으로 잡는다.
@@ -107,7 +126,12 @@ export const useSpotlight = (targets: readonly TutorialTarget[], enabled: boolea
           cardElement.style.transform = "";
         } else {
           const primaryRect = unionRects(primary.map(visibleRect).filter(isRect));
-          const position = getCardPosition(primaryRect, cardSize, viewport, rects);
+          const size = `${viewport.width}x${viewport.height}|${cardSize.width}x${cardSize.height}`;
+          if (primaryRect && (!pinnedPosition || pinnedSize !== size)) {
+            pinnedPosition = getCardPosition(primaryRect, cardSize, viewport, rects);
+            pinnedSize = size;
+          }
+          const position = pinnedPosition ?? getCardPosition(null, cardSize, viewport);
           cardElement.style.transform = `translate3d(${Math.round(position.left)}px, ${Math.round(position.top)}px, 0)`;
         }
         cardElement.style.visibility = dialogOpen ? "hidden" : "visible";
@@ -115,8 +139,11 @@ export const useSpotlight = (targets: readonly TutorialTarget[], enabled: boolea
     };
 
     tick();
-    return () => window.cancelAnimationFrame(frame);
-  }, [target, enabled, isCompact, dim, outline, card]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      emphasized.forEach((element) => element.removeAttribute("data-tutorial-attention"));
+    };
+  }, [stepId, target, enabled, isCompact, emphasize, dim, outline, card]);
 
   // 이전 단계의 상태가 새 단계에 잠깐이라도 보이지 않게 한다.
   return !enabled || state.target !== target ? "searching" : state.status;

@@ -136,14 +136,15 @@ export const createConsultationEnvironment = (request) => {
     },
   };
   currentEnvironment = environment;
-  globalThis.window = {
+  // 브라우저처럼 focus·visibilitychange 이벤트를 받을 수 있게 EventTarget으로 만든다.
+  globalThis.window = Object.assign(new EventTarget(), {
     sessionStorage: environment.storage,
     setTimeout: (callback, delay) => schedule(callback, delay),
     clearTimeout: (id) => timers.delete(id),
     setInterval: (callback, delay) => schedule(callback, delay, true),
     clearInterval: (id) => timers.delete(id),
     requestAnimationFrame: (callback) => schedule(callback, 0),
-  };
-  globalThis.document = { querySelector: () => null };
+  });
+  globalThis.document = Object.assign(new EventTarget(), { querySelector: () => null, visibilityState: "visible" });
   return environment;
 };

@@ -1,5 +1,5 @@
 import {
-  getAvailablePeriods,
+  CONSULTATION_SCHEDULE,
   type ConsultationKind,
 } from "../../../entities/consultation/index.ts";
 import type { UserRole } from "../../../entities/user/index.ts";
@@ -33,17 +33,16 @@ export const getTeacherWorkspaceVariant = (
 export const canManageHomeBanner = (role: UserRole | null) =>
   role === "TEACHER" || role === "WEE_TEACHER";
 
+// 위클래스 시간표는 7교시까지만 보여준다. 4교시는 학생 신청은 막지만 교사 시간표에는 남긴다.
+const GENERAL_TEACHER_HIDDEN_PERIODS = new Set(["8교시", "9교시", "저녁시간"]);
+
 export const getTeacherAvailablePeriods = (
   kind: ConsultationKind,
   name: string,
 ) => {
+  const periods = CONSULTATION_SCHEDULE.map(({ period }) => period);
   if (kind === "common" || getTeacherWorkspaceVariant(name) === "general") {
-    const periods = getAvailablePeriods("general", `${normalizeTeacherName(name)} 선생님`);
-    if (periods.includes("4교시")) return periods;
-
-    const lunchIndex = periods.indexOf("점심시간");
-    if (lunchIndex === -1) return [...periods, "4교시"];
-    return [...periods.slice(0, lunchIndex), "4교시", ...periods.slice(lunchIndex)];
+    return periods.filter((period) => !GENERAL_TEACHER_HIDDEN_PERIODS.has(period));
   }
-  return getAvailablePeriods("career", `${normalizeTeacherName(name)} 선생님`);
+  return periods;
 };

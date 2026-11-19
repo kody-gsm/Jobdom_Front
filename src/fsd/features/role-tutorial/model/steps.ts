@@ -9,7 +9,7 @@ export type TutorialRoute =
 // 실제 화면 요소에 `data-tutorial-target`으로 붙는 이름이다.
 export type TutorialTarget =
   | "navigation" | "account" | "upcoming" | "nav-counsel" | "nav-recruit"
-  | "consultation-type" | "consultation-content" | "consultation-date" | "consultation-period" | "consultation-submit"
+  | "consultation-type" | "consultation-teacher" | "consultation-title" | "consultation-category" | "consultation-body" | "consultation-date" | "consultation-period" | "consultation-submit"
   | "recruit-search" | "recruit-list" | "recruit-apply" | "form-fields" | "form-submit"
   | "calendar" | "timetable" | "slot-lock" | "slot-force" | "requests" | "banner-editor"
   | "nav-teacher-recruit" | "nav-teacher-forms" | "recruit-create" | "recruit-editor" | "recruit-table"
@@ -19,6 +19,7 @@ export type TutorialTarget =
 // 다음 단계로 넘어가는 조건
 export type TutorialAction =
   | { type: "next" } // '다음' 버튼
+  | { type: "filled"; selector: string }
   | { type: "route"; path: TutorialRoute } // 강조된 메뉴·링크를 눌러 해당 화면으로 이동
   | { type: "selector"; selectors: readonly string[] } // 화면에 모든 선택자가 나타남 (선택·입력 완료)
   | { type: "dialog" }; // 열린 창을 처리하고 닫음
@@ -67,12 +68,14 @@ const REPLAY_STEP = {
 const STUDENT_STEPS: readonly TutorialStep[] = [
   { id: "student-navigation", section: "잡담 시작하기", route: "/", target: "navigation", action: NEXT, title: "잡담에 오신 것을 환영해요", description: "지금부터 실제 화면에서 직접 눌러 보며 연습해요. 화면에 보이는 상담·공고·폼은 모두 연습용 데이터이고, 무엇을 눌러도 실제로 신청·제출되지 않아요." },
   { id: "upcoming", section: "상담 대시보드", route: "/", target: "upcoming", action: NEXT, title: "다가오는 상담을 한눈에", description: "‘예정 상담’에서 상담 유형, 선생님, 대기·확정 상태와 날짜·교시를 확인해요. 지금은 연습용 상담 하나가 ‘상담 대기’로 보여요." },
-  { id: "go-counsel", section: "상담 신청 · 1/6", route: "/", target: "nav-counsel", action: { type: "route", path: "/counsel" }, title: "상담을 신청해 볼게요", description: "상단 메뉴에서 상담 신청 화면으로 이동해요.", task: "‘상담 신청’ 메뉴를 눌러 보세요." },
-  { id: "consultation-type", section: "상담 신청 · 2/6", route: "/counsel", target: "consultation-type", action: { type: "selector", selectors: [pressed("consultation-type")] }, title: "상담 유형과 선생님을 골라요", description: "‘취업 진로 상담’ 또는 ‘wee클래스 상담’을 고르면 그 유형의 선생님이 보여요.", task: "선생님을 눌러 선택해 보세요." },
-  { id: "consultation-content", section: "상담 신청 · 3/6", route: "/counsel", target: "consultation-content", action: NEXT, title: "어떤 고민인지 적어요", description: "선생님이 미리 준비할 수 있도록 제목과 카테고리, 구체적인 고민을 적어요.", task: "제목·카테고리·고민 내용을 채운 뒤 ‘다음’을 눌러 주세요." },
-  { id: "consultation-date", section: "상담 신청 · 4/6", route: "/counsel", target: "consultation-date", action: { type: "selector", selectors: [pressed("consultation-date")] }, title: "상담 희망일을 골라요", description: "선택할 수 있는 날짜만 눌러져요. 다른 달은 달력 위 ‘이전 달·다음 달’로 이동해요.", task: "달력에서 다른 날짜를 하나 골라 보세요." },
-  { id: "consultation-period", section: "상담 신청 · 5/6", route: "/counsel", target: "consultation-period", action: { type: "selector", selectors: [pressed("consultation-period")] }, title: "교시를 골라요", description: "회색으로 ‘예약 불가’라고 보이는 교시는 고를 수 없어요.", task: "가능한 교시를 하나 골라 보세요." },
-  { id: "consultation-submit", section: "상담 신청 · 6/6", route: "/counsel", target: "consultation-submit", extraTargets: ["consultation-type", "consultation-content", "consultation-date", "consultation-period"], action: { type: "route", path: "/" }, title: "‘상담 신청’을 눌러요", description: "빠진 항목이 있으면 빨간색으로 알려 줘요. 연습이라 실제 선생님께는 신청되지 않아요.", task: "‘상담 신청’ 버튼을 눌러 보세요." },
+  { id: "go-counsel", section: "상담 신청 · 1/8", route: "/", target: "nav-counsel", action: { type: "route", path: "/counsel" }, title: "상담을 신청해 볼게요", description: "상단 메뉴에서 상담 신청 화면으로 이동해요.", task: "‘상담 신청’ 메뉴를 눌러 보세요." },
+  { id: "consultation-type", section: "상담 신청 · 2/8", route: "/counsel", target: "consultation-teacher", action: { type: "selector", selectors: [pressed("consultation-teacher")] }, title: "상담 선생님을 골라요", description: "선택된 상담 유형에 맞는 선생님이 보여요. 원하는 선생님을 눌러 선택해요.", task: "선생님을 눌러 선택해 보세요." },
+  { id: "consultation-title", section: "상담 신청 · 3/8", route: "/counsel", target: "consultation-title", action: { type: "filled", selector: '[data-tutorial-target="consultation-title"] input' }, title: "상담 제목을 적어요", description: "선생님이 상담 내용을 미리 알 수 있도록 제목을 적어요.", task: "상담 제목을 입력해 보세요." },
+  { id: "consultation-category", section: "상담 신청 · 4/8", route: "/counsel", target: "consultation-category", action: { type: "filled", selector: '[data-tutorial-target="consultation-category"] [aria-pressed="true"]' }, title: "상담 카테고리를 골라요", description: "작성한 제목에 맞는 카테고리를 하나 골라요.", task: "카테고리를 하나 선택해 보세요." },
+  { id: "consultation-body", section: "상담 신청 · 5/8", route: "/counsel", target: "consultation-body", action: { type: "filled", selector: '[data-tutorial-target="consultation-body"] textarea' }, title: "고민 내용을 적어요", description: "선생님이 미리 준비할 수 있도록 구체적인 고민 내용을 적어요.", task: "고민 내용을 입력해 보세요." },
+  { id: "consultation-date", section: "상담 신청 · 6/8", route: "/counsel", target: "consultation-date", action: { type: "selector", selectors: [pressed("consultation-date")] }, title: "상담 희망일을 골라요", description: "선택할 수 있는 날짜만 눌러져요. 다른 달은 달력 위 ‘이전 달·다음 달’로 이동해요.", task: "달력에서 다른 날짜를 하나 골라 보세요." },
+  { id: "consultation-period", section: "상담 신청 · 7/8", route: "/counsel", target: "consultation-period", action: { type: "selector", selectors: [pressed("consultation-period")] }, title: "교시를 골라요", description: "회색으로 ‘예약 불가’라고 보이는 교시는 고를 수 없어요.", task: "가능한 교시를 하나 골라 보세요." },
+  { id: "consultation-submit", section: "상담 신청 · 8/8", route: "/counsel", target: "consultation-submit", extraTargets: ["consultation-type", "consultation-teacher", "consultation-title", "consultation-category", "consultation-body", "consultation-date", "consultation-period"], action: { type: "route", path: "/" }, title: "‘상담 신청’을 눌러요", description: "빠진 항목이 있으면 빨간색으로 알려 줘요. 연습이라 실제 선생님께는 신청되지 않아요.", task: "‘상담 신청’ 버튼을 눌러 보세요." },
   { id: "upcoming-after", section: "상담 대시보드", route: "/", target: "upcoming", action: NEXT, title: "방금 신청한 상담이 보여요", description: "신청한 상담은 선생님이 수락하기 전까지 ‘상담 대기’로 보여요. 수락되면 ‘상담 확정’으로 바뀌고 알림이 와요." },
   { id: "go-recruit", section: "취업 공고 · 1/3", route: "/", target: "nav-recruit", action: { type: "route", path: "/recruit" }, title: "취업 공고를 살펴봐요", description: "상단 메뉴에서 취업 공고로 이동해요.", task: "‘취업 공고’ 메뉴를 눌러 보세요." },
   { id: "recruit-search", section: "취업 공고 · 2/3", route: "/recruit", target: "recruit-search", action: NEXT, title: "관심 있는 공고를 찾아요", description: "회사명·직무·내용으로 검색하고, 모집 상태와 직무 필터로 좁혀요. 연습용 공고가 직무마다 하나씩, 마감된 공고도 하나 있어요. 자유롭게 눌러 본 뒤 ‘다음’을 눌러 주세요." },
@@ -80,8 +83,8 @@ const STUDENT_STEPS: readonly TutorialStep[] = [
   { id: "recruit-apply", section: "신청 폼 · 1/3", route: "/recruit/7001", target: "recruit-apply", action: { type: "route", path: "/forms/9001" }, title: "연결된 신청 폼으로 지원해요", description: "공고에 신청 폼이 연결되어 있으면 여기서 바로 지원할 수 있어요.", task: "‘신청폼 보기’를 눌러 보세요." },
   { id: "form-fields", section: "신청 폼 · 2/3", route: "/forms/9001", target: "form-fields", action: NEXT, title: "질문에 답해요", description: "별표(*)가 있는 질문은 꼭 답해야 해요. 질문에 따라 글쓰기, 선택, 날짜, 파일 첨부 등이 있어요. 답을 적은 뒤 ‘다음’을 눌러 주세요." },
   { id: "form-submit", section: "신청 폼 · 3/3", route: "/forms/9001", target: "form-submit", extraTargets: ["form-fields"], action: { type: "selector", selectors: ['[data-tutorial-target~="form-submitted"]'] }, title: "‘제출’을 눌러요", description: "제출하면 이 자리에 내가 낸 응답이 보이고, 마감 전에는 ‘재응답’으로 고칠 수 있어요. 연습이라 실제로 제출되지 않아요.", task: "‘제출’ 버튼을 눌러 보세요." },
-  { id: "student-notifications", section: "알림과 프로필 · 1/2", route: "/forms/9001", target: "notifications", action: { type: "selector", selectors: [NOTIFICATIONS_READ] }, title: "새 알림이 왔어요", description: "종 아이콘의 빨간 숫자는 읽지 않은 알림 수예요. 상담 수락·거절, 새 공고·신청 폼 소식이 여기로 와요. 알림을 누르면 관련 화면으로 이동하고 읽음으로 바뀌어요.", task: "종 아이콘을 눌러 알림을 열고, 새 알림을 눌러 읽어 보세요." },
-  { id: "student-profile", section: "알림과 프로필 · 2/2", route: "/forms/9001", target: "nav-profile", action: { type: "route", path: "/profile" }, title: "내 정보는 프로필에서 봐요", description: "프로필에서 내 정보와 상담 내역을 확인하고, 이 안내를 다시 볼 수 있어요.", task: "오른쪽 위 프로필 아이콘을 눌러 보세요." },
+  { id: "student-notifications", section: "알림과 프로필 · 1/2", route: "/forms/9001", target: "notifications", action: { type: "route", path: "/" }, title: "상담 신청 알림을 확인해요", description: "연습용 선생님이 앞서 신청한 상담을 수락했어요. 종 아이콘의 빨간 숫자는 읽지 않은 알림 수예요.", task: "종 아이콘을 눌러 알림을 열고, 상담 수락 알림을 눌러 보세요." },
+  { id: "student-profile", section: "알림과 프로필 · 2/2", route: "/", target: "nav-profile", action: { type: "route", path: "/profile" }, title: "내 정보는 프로필에서 봐요", description: "프로필에서 내 정보와 상담 내역을 확인하고, 이 안내를 다시 볼 수 있어요.", task: "오른쪽 위 프로필 아이콘을 눌러 보세요." },
   REPLAY_STEP,
 ];
 

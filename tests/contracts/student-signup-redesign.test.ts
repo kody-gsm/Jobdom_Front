@@ -16,7 +16,7 @@ assert.match(hook, /useCountdown/);
 assert.match(hook, /normalizeVerificationCode/);
 assert.match(hook, /getSignupError/);
 assert.match(hook, /router\.push\("\/login"\)/);
-assert.match(hook, /verificationCountdown\.start\(180\)/);
+assert.match(hook, /verificationCountdown\.start\(600\)/);
 assert.match(hook, /resendCountdown\.start\(2\)/);
 assert.match(form, /useSignupForm/);
 assert.match(form, /TextField/);

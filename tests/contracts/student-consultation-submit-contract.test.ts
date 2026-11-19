@@ -29,7 +29,8 @@ assert.match(hook, /isUnavailableSlotError/);
 assert.match(form, /getConsultationTeacherOptions\(counselType, teachers\)/);
 assert.match(form, /displayTeachers\.map/);
 assert.match(form, /isTimeUnavailable\(row\.period\)/);
-assert.match(availability, /!getAvailablePeriods\([\s\S]*\)\.includes\(time\)/);
+assert.match(availability, /getAvailablePeriods\(/);
+assert.match(availability, /!isInAvailablePeriods\(time\)/);
 assert.match(form, /예약 불가/);
 assert.doesNotMatch(form, /선택됨/);
 

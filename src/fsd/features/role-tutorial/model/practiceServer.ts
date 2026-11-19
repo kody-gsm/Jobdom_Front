@@ -15,6 +15,7 @@ type Form = { id: number; title: string; description: string | null; deadline: s
 type Answer = { questionId: number; textValue?: string; optionIds?: number[]; fileId?: number };
 type Submission = { id: number; formId: number; userId: number; userName: string; studentNumber: string; submittedAt: string; answers: Answer[] };
 type Recruit = { id: number; companyName: string | null; interviewDate: string | null; deadline: string | null; summary: string | null; fields: string[]; imageUrl: string | null; formId: number | null; status: "DRAFT" | "PUBLISHED" | "CLOSED"; createdAt: string; updatedAt: string };
+type PracticeNotification = { id: number; type: string; title: string; content: string; targetId: number; targetUrl: string; isRead: boolean; targetStatus: string | null; expired: boolean; createdAt: string; expiresAt: null };
 
 export type PracticeIdentity = { userId: number; name: string; role: TutorialRole };
 
@@ -69,6 +70,7 @@ export const createPracticeServer = (identity: PracticeIdentity, now = new Date(
     { id: id(), kind: homeKind, studentId, studentName, studentNumber: "2101", teacherId, teacherName, title: "진로에 대해 이야기하고 싶어요", content: "관심 있는 직무를 찾고 포트폴리오를 준비하는 방법이 궁금해요.", category: "취업", date: nextWeekday(now, 1), period: "3교시", status: "WAITING" },
     { id: id(), kind: homeKind, studentId: 802, studentName: "연습학생", studentNumber: "2102", teacherId, teacherName, title: "면접 준비 상담", content: "모의 면접을 해보고 싶어요.", category: "취업", date: nextWeekday(now, 2), period: "5교시", status: "RESERVED" },
   ];
+  let latestStudentConsultationId: number | null = null;
   const locks = new Set<string>([`${homeKind}|${nextWeekday(now, 1)}|1교시`]);
   const students = [
     { id: 801, name: PRACTICE_STUDENT, student_number: "2101" },
@@ -115,15 +117,26 @@ export const createPracticeServer = (identity: PracticeIdentity, now = new Date(
     practiceRecruit(7008, "연습 마감 회사", ["FRONTEND", "BACKEND", "FULLSTACK", "MOBILE", "IOT", "AI", "SECURITY", "ETC"], "지원 기간이 끝난 연습용 공고예요. ‘마감된 공고’ 필터에서 볼 수 있어요.", toDateKey(pastDate)),
   ];
   let banner: Record<string, unknown> | null = null;
-  // 직접 열어 읽어 볼 연습 알림. 누르면 지금 단계 화면(학생: 신청 폼, 교사: 상담 일정)으로 이어진다.
-  const notifications = [isStudent ? {
-    id: 6001, type: "FORM_PUBLISHED", title: "새 신청 폼이 공개됐어요", content: `${PRACTICE_FORM_TITLE}가 공개됐어요. 마감 전에 응답해 주세요.`,
-    targetId: 9001, targetUrl: "/form/9001", isRead: false, targetStatus: null, expired: false, createdAt: stamp, expiresAt: null,
-  } : {
+  // 교사는 신청 알림을 먼저 받고, 학생은 연습 상담을 신청한 뒤 선생님의 수락을 받아야 알림이 생긴다.
+  const notifications: PracticeNotification[] = isStudent ? [] : [{
     id: 6001, type: homeKind === "course" ? "COURSE_COUNSELING_REQUESTED" : "COMMON_COUNSELING_REQUESTED", title: "새 상담 신청이 왔어요",
     content: `${PRACTICE_STUDENT} 학생이 상담을 신청했어요. 상담 요청에서 확인해 주세요.`,
     targetId: reservations[0].id, targetUrl: `/teacher/${homeKind}/${reservations[0].id}`, isRead: false, targetStatus: null, expired: false, createdAt: stamp, expiresAt: null,
   }];
+
+  const approveLatestStudentConsultation = () => {
+    if (!isStudent || latestStudentConsultationId === null) return false;
+    const reservation = reservations.find((item) => item.id === latestStudentConsultationId);
+    if (!reservation || reservation.status !== "WAITING") return false;
+    reservation.status = "RESERVED";
+    notifications.push({
+      id: id(), type: "COUNSELING_APPROVED", title: "상담 신청이 수락됐어요",
+      content: `${reservation.teacherName} 선생님이 ‘${reservation.title}’ 상담을 수락했어요. ${reservation.date} ${reservation.period}에 만나요.`,
+      targetId: reservation.id, targetUrl: `/student/${reservation.kind}/${reservation.id}`, isRead: false,
+      targetStatus: "RESERVED", expired: false, createdAt: new Date().toISOString(), expiresAt: null,
+    });
+    return true;
+  };
 
   const formSummary = (form: Form) => ({
     id: form.id, title: form.title, description: form.description, deadline: form.deadline, status: form.status,
@@ -154,6 +167,7 @@ export const createPracticeServer = (identity: PracticeIdentity, now = new Date(
   });
 
   const handle = ({ method, path, body }: InterceptedRequest): InterceptedResponse => {
+    if (identity.userId === -1 && path.startsWith("/api/notifications/subscribe-ticket")) return fail(503, "로컬 미리보기에는 실시간 연결이 없습니다.");
     if (PASSTHROUGH.some((pattern) => pattern.test(path))) return { handled: false };
     const [pathname, search = ""] = path.split("?");
     const query = new URLSearchParams(search);
@@ -198,6 +212,7 @@ export const createPracticeServer = (identity: PracticeIdentity, now = new Date(
         const teacher = Number(json.teacherId);
         const created = reservationInput(kind, json, { teacherId: Number.isFinite(teacher) ? teacher : teacherId, teacherName: kind === "course" ? PRACTICE_TEACHER : "체험 wee 선생님" });
         reservations.push(created);
+        latestStudentConsultationId = created.id;
         return ok("상담 신청이 완료되었습니다.");
       }
     }
@@ -345,5 +360,5 @@ export const createPracticeServer = (identity: PracticeIdentity, now = new Date(
     return method === "GET" ? ok([]) : ok({});
   };
 
-  return { handle };
+  return { handle, approveLatestStudentConsultation };
 };

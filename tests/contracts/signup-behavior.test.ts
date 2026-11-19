@@ -16,7 +16,7 @@ assert.match(source, /getGsmEmailErrorMessage/);
 assert.match(validation, /verificationCode\.trim\(\)\.length !== 6/);
 assert.match(validation, /isValidPassword/);
 assert.match(validation, /values\.password !== values\.confirmPassword/);
-assert.match(hook, /verificationCountdown\.start\(180\)/);
+assert.match(hook, /verificationCountdown\.start\(600\)/);
 assert.match(hook, /resendCountdown\.start\(2\)/);
 assert.match(hook, /router\.push\("\/login"\)/);
 assert.match(hook, /termsAccepted/);
