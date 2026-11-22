@@ -2,6 +2,7 @@ import type {
   ConsultationKind,
   ReservationInput,
 } from "@fsd/entities/consultation";
+import { assertWeePeriodAllowed } from "@fsd/entities/consultation";
 import { requestWithSession } from "@fsd/entities/user";
 import type { ApiRequestInit } from "@fsd/shared/api";
 import { createTimetablePath } from "../model/timetablePath.ts";
@@ -69,11 +70,14 @@ export const getConsultationSlotStatus = (
   );
 };
 
-export const submitConsultation = (
+export const submitConsultation = async (
   kind: ConsultationKind,
   input: SubmitConsultationInput,
-) => requestWithSession<string>(`/student/${kind}`, {
-  method: "POST",
-  body: JSON.stringify(input),
-  invalidateCache: [`/student/${kind}`, `/teacher/${kind}`],
-});
+) => {
+  assertWeePeriodAllowed(kind, input.period);
+  return requestWithSession<string>(`/student/${kind}`, {
+    method: "POST",
+    body: JSON.stringify(input),
+    invalidateCache: [`/student/${kind}`, `/teacher/${kind}`],
+  });
+};

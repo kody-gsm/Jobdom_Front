@@ -98,16 +98,23 @@ test("career: saved 9교시 is not restored or selectable for 임경원", async 
   assert.equal(form.value.selectedTime, null);
 });
 
-test("general: saved 8교시 remains selectable for WEE counseling", async () => {
-  writeConsultationDraft(environment.storage, key, "general", {
-    ...savedDraft, teacherId: 4, period: "8교시",
+for (const period of ["8교시", "9교시"]) {
+  test(`general: saved ${period} is not restored or selectable for WEE counseling`, async () => {
+    writeConsultationDraft(environment.storage, key, "general", {
+      ...savedDraft, teacherId: 4, period,
+    });
+    const form = mount("general");
+    teachers.resolve([{ id: 4, name: "강우빈" }]);
+    await environment.settle();
+    assert.equal(form.value.isTimeUnavailable(period), true);
+    assert.equal(form.value.selectedTime, null);
+    form.value.toggleTime(period);
+    await environment.settle();
+    assert.equal(form.value.selectedTime, null);
+    await form.value.handleSubmit(event);
+    assert.equal(postCalls().length, 0);
   });
-  const form = mount("general");
-  teachers.resolve([{ id: 4, name: "강우빈" }]);
-  await environment.settle();
-  assert.equal(form.value.isTimeUnavailable("8교시"), false);
-  assert.equal(form.value.selectedTime, "8교시");
-});
+}
 
 test("A1: clicking the current tab preserves loaded teachers, selection and category", async () => {
   seedDraft();

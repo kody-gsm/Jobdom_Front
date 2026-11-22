@@ -177,14 +177,7 @@ export function TeacherPage() {
     const todayKey = dateKey(today);
     const upcomingPending = useMemo(() => pending.filter((item) => item.date >= todayKey), [pending, todayKey]);
     const upcomingApproved = useMemo(() => approved, [approved]);
-    // 숨기는 교시라도 이 주에 신청이 있으면 시간표에 보여야 놓치지 않는다.
-    const weekBookedPeriods = useMemo(() => {
-        const weekKeys = new Set(week.map(dateKey));
-        return new Set([...upcomingApproved, ...upcomingPending]
-            .filter((item) => weekKeys.has(item.date))
-            .map((item) => formatPeriod(item.period)));
-    }, [week, upcomingApproved, upcomingPending]);
-    const periods = getTeacherAvailablePeriods(kind, teacherName, weekBookedPeriods);
+    const periods = getTeacherAvailablePeriods(kind, teacherName);
     const reservationDates = useMemo(
         () => new Set([...upcomingPending, ...upcomingApproved].map((item) => item.date)),
         [upcomingPending, upcomingApproved],

@@ -15,6 +15,8 @@ export type {
 export {
   TEACHERS,
   createReservationInput,
+  isBlockedWeePeriod,
+  assertWeePeriodAllowed,
   getAvailablePeriods,
   getSelectablePeriods,
   getSelectableConsultationDates,
