@@ -20,11 +20,20 @@ export const TEACHERS: ConsultationTeacher[] = [
 const BLOCKED_GENERAL_PERIODS = new Set(["4교시"]);
 const GENERAL_END_PERIODS = new Set(["저녁시간"]);
 const BLOCKED_LATE_PERIODS = new Set(["8교시", "9교시"]);
+const WEE_LATE_PERIOD_ERROR = "위클래스 상담은 8·9교시에 신청할 수 없습니다.";
+
+export const isBlockedWeePeriod = (kind: ConsultationKind, period: string) =>
+  kind === "common" && BLOCKED_LATE_PERIODS.has(period.trim());
+
+export const assertWeePeriodAllowed = (kind: ConsultationKind, period: string) => {
+  if (isBlockedWeePeriod(kind, period)) throw new Error(WEE_LATE_PERIOD_ERROR);
+};
+
 const GENERAL_PERIODS = CONSULTATION_SCHEDULE
   .map(({ period }) => period)
   .filter((period) =>
     !BLOCKED_GENERAL_PERIODS.has(period) &&
-    !GENERAL_END_PERIODS.has(period),
+    !GENERAL_END_PERIODS.has(period) && !BLOCKED_LATE_PERIODS.has(period),
   );
 
 export const toConsultationKind = (type: ConsultationType): ConsultationKind =>
@@ -172,6 +181,7 @@ export const validateConsultationDraft = (
   if (draft.type === "career" && !draft.teacher) return "선생님을 선택해주세요";
   if (!draft.date) return "날짜를 선택해주세요";
   if (!draft.period) return "교시를 선택해주세요";
+  if (isBlockedWeePeriod(toConsultationKind(draft.type), draft.period)) return WEE_LATE_PERIOD_ERROR;
   if (draft.type === "career" && hasCareerReservation) {
     return "진로 상담은 중복 신청할 수 없습니다";
   }

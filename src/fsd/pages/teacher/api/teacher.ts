@@ -1,4 +1,4 @@
-import { createConsultationApi } from "@fsd/entities/consultation";
+import { assertWeePeriodAllowed, createConsultationApi } from "@fsd/entities/consultation";
 import type { ConsultationKind, CounselingCategory, TeacherSlotStatus } from "@fsd/entities/consultation";
 import { createBannerApi } from "@fsd/entities/banner";
 import { getSession, requestWithSession } from "@fsd/entities/user";
@@ -35,11 +35,13 @@ export type ForceReservationInput = {
     period: string;
 };
 
-export const forceCreateConsultation = (kind: ConsultationKind, input: ForceReservationInput) =>
-    requestWithSession<string>(`/teacher/${kind}/force`, {
+export const forceCreateConsultation = async (kind: ConsultationKind, input: ForceReservationInput) => {
+    assertWeePeriodAllowed(kind, input.period);
+    return requestWithSession<string>(`/teacher/${kind}/force`, {
         method: "POST",
         body: JSON.stringify(input),
         invalidateCache: [`/student/${kind}`, `/teacher/${kind}`],
     });
+};
 
 export { getSession };

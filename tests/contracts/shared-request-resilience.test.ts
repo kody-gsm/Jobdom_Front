@@ -19,6 +19,7 @@ const api = createAuthenticatedRequest({
       resolveOld = resolve;
       rejectOld = reject;
     });
+    if (path === "/student/common") return [] as T;
     return calls.length as T;
   },
   readAccessToken: () => token,
