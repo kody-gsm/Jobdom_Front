@@ -25,7 +25,7 @@ assert.doesNotMatch(route, /useState|getTeacherConsultations|approveConsultation
 assert.match(page, /진로 상담/);
 assert.match(page, /getTeacherConsultationKinds\(teacherRole\)/);
 assert.match(page, /teacherKinds\.map/);
-assert.match(page, /WEEKLY_CLASS_SCHEDULE/);
+assert.match(page, /getTeacherClassScheduleEntry/);
 assert.match(page, /getTeacherConsultations\(kind\)/);
 assert.match(page, /approveConsultation\(kind,\s*selection.reservation.reservation_id\)/);
 assert.match(page, /rejectConsultation\(kind,\s*selection.reservation.reservation_id\)/);

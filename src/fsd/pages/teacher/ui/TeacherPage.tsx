@@ -5,17 +5,17 @@ import Image from "next/image";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { TeacherHeader } from "@fsd/widgets/teacher-header";
 import type { ConsultationKind, TeacherReservation } from "@fsd/entities/consultation";
+import { getTeacherClassScheduleEntry } from "@fsd/entities/consultation";
 import type { UserRole } from "@fsd/entities/user";
 import type { HomeBanner } from "@fsd/entities/banner";
 import { resolveBannerImageUrl } from "@fsd/entities/banner";
 import { approveConsultation, forceCreateConsultation, getSession, getTeacherBanner, getTeacherConsultations, getPendingTeacherConsultations, getTeacherSlotStatus, getTeacherStudents, lockConsultation, rejectConsultation, saveTeacherBanner, unlockConsultation } from "../api/teacher";
 import type { SimpleStudent } from "../api/teacher";
-import { dateKey, formatPeriod, getWeek, reservationSlot, WEEKLY_CLASS_SCHEDULE } from "../model/calendar";
+import { dateKey, formatPeriod, getWeek, reservationSlot } from "../model/calendar";
 import {
     canManageHomeBanner,
     getTeacherConsultationKinds,
     getTeacherAvailablePeriods,
-    getTeacherWorkspaceVariant,
 } from "../model/workspace";
 
 type SelectedRequest = { reservation: TeacherReservation; approved: boolean };
@@ -32,6 +32,7 @@ const groupBySlot = <T extends { date: string; period: string }>(items: readonly
 
 export function TeacherPage() {
     const [teacherName, setTeacherName] = useState("선생님");
+    const [teacherEmail, setTeacherEmail] = useState("");
     const [teacherRole, setTeacherRole] = useState<UserRole | null>(null);
     const [today, setToday] = useState(() => new Date());
     const [selectedDate, setSelectedDate] = useState(() => new Date());
@@ -110,6 +111,7 @@ export function TeacherPage() {
             const role = session?.role ?? null;
             setTeacherId(session?.userId ?? null);
             setTeacherName(name);
+            setTeacherEmail(session?.email ?? "");
             setTeacherRole(role);
             const [authorizedKind] = getTeacherConsultationKinds(role);
             if (authorizedKind) setKind(authorizedKind);
@@ -171,7 +173,6 @@ export function TeacherPage() {
     // 같은 주 안에서 날짜를 바꿀 때는 같은 배열을 유지해 주간 시간 금지 상태를 다시 불러오지 않는다.
     const weekStartKey = dateKey(getWeek(selectedDate)[0]);
     const week = useMemo(() => getWeek(new Date(`${weekStartKey}T00:00:00`)), [weekStartKey]);
-    const teacherVariant = getTeacherWorkspaceVariant(teacherName);
     const teacherKinds = getTeacherConsultationKinds(teacherRole);
     const canManageBanner = canManageHomeBanner(teacherRole);
     const todayKey = dateKey(today);
@@ -233,6 +234,10 @@ export function TeacherPage() {
     };
     const handleApprove = async () => {
         if (!selection || selection.approved || isProcessing) return;
+        if (getTeacherClassScheduleEntry({ name: teacherName, email: teacherEmail }, selection.reservation.date, selection.reservation.period)) {
+            setActionError("수업 시간에는 상담을 수락할 수 없습니다.");
+            return;
+        }
         setIsProcessing(true);
         setActionError(null);
         try {
@@ -267,6 +272,7 @@ export function TeacherPage() {
     };
     const handleSlotToggle = async (date: string, period: string) => {
         if (teacherId === null || processingSlot) return;
+        if (getTeacherClassScheduleEntry({ name: teacherName, email: teacherEmail }, date, period)) return;
         if (date < todayKey) return;
         const slot = `${date}_${period}`;
         const isLocked = lockedSlots.has(slot);
@@ -353,6 +359,7 @@ export function TeacherPage() {
 
     const handleSlotModeAction = (date: string, period: string, isLocked: boolean, isPast: boolean) => {
         if (isPast) return true;
+        if ((isLockMode || isForceMode) && getTeacherClassScheduleEntry({ name: teacherName, email: teacherEmail }, date, period)) return true;
         if (isLockMode) {
             void handleSlotToggle(date, period);
             return true;
@@ -502,7 +509,7 @@ export function TeacherPage() {
                     </section>
                 ) : null}
                 <div className="my-6 space-y-3 border-t border-border pt-5 text-sm">
-                    <p className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-yellow-400" />수업</p>
+                    <p className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-blue-400" />수업 · 예약 불가</p>
                     <p className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-brand" />상담 확정</p>
                     <p className="flex items-center gap-3"><span className="h-3 w-3 rounded-full border border-brand bg-brand-soft" />상담 대기</p>
                     <p className="flex items-center gap-3"><span className="h-3 w-3 rounded-full bg-gray-400" />예약 금지</p>
@@ -562,32 +569,33 @@ export function TeacherPage() {
                         </tr></thead>
                         <tbody>{periods.map((period) => <tr key={period}>
                             <th scope="row" className="border border-border p-2 text-sm">{period}</th>
-                            {week.map((date, index) => {
+                            {week.map((date) => {
                                 const currentDate = dateKey(date);
                                 const isPast = currentDate < todayKey;
                                 const slot = `${currentDate}_${period}`;
-                                const classItem = teacherVariant === "im-gyeongwon" ? WEEKLY_CLASS_SCHEDULE[WEEKDAYS[index]]?.[period] : undefined;
+                                const classItem = getTeacherClassScheduleEntry({ name: teacherName, email: teacherEmail }, currentDate, period);
                                 const confirmed = approvedBySlot.get(slot) ?? NO_RESERVATIONS;
                                 const waiting = isPast ? NO_RESERVATIONS : pendingBySlot.get(slot) ?? NO_RESERVATIONS;
                                 const isLocked = !isPast && lockedSlots.has(slot);
-                                const isModeActive = !isPast && (isLockMode || isForceMode);
+                                const isModeActive = !isPast && !classItem && (isLockMode || isForceMode);
                                 return <td key={slot}
                                     role={isModeActive ? "button" : undefined}
                                     tabIndex={isModeActive ? 0 : undefined}
-                                    aria-label={isPast ? undefined : isLockMode ? `${currentDate} ${period} ${isLocked ? "예약 금지 해제" : "예약 금지"}` : isForceMode ? `${currentDate} ${period} 상담 추가 신청` : undefined}
+                                    aria-disabled={classItem && (isLockMode || isForceMode) ? true : undefined}
+                                    aria-label={isPast ? undefined : classItem ? `${currentDate} ${period} 수업 시간 예약 불가` : isLockMode ? `${currentDate} ${period} ${isLocked ? "예약 금지 해제" : "예약 금지"}` : isForceMode ? `${currentDate} ${period} 상담 추가 신청` : undefined}
                                     onClick={(event) => {
-                                        if (isPast || (event.target instanceof Element && event.target.closest("button"))) return;
+                                        if (isPast || classItem || (event.target instanceof Element && event.target.closest("button"))) return;
                                         handleSlotModeAction(currentDate, period, isLocked, isPast);
                                     }}
                                     onKeyDown={(event) => {
-                                        if (isPast || (event.key !== "Enter" && event.key !== " ") || (event.target instanceof Element && event.target.closest("button"))) return;
+                                        if (isPast || classItem || (event.key !== "Enter" && event.key !== " ") || (event.target instanceof Element && event.target.closest("button"))) return;
                                         event.preventDefault();
                                         handleSlotModeAction(currentDate, period, isLocked, isPast);
                                     }}
-                                    className={`h-20 border border-border p-0 align-top ${isPast ? "bg-gray-300" : isLocked ? "bg-gray-50" : ""} ${isLockMode && !isPast ? "cursor-pointer hover:ring-2 hover:ring-red-300 hover:ring-inset" : ""} ${isForceMode && !isPast ? "cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-inset" : ""}`}>
+                                    className={`h-20 border border-border p-0 align-top ${isPast ? "bg-gray-300" : classItem ? "bg-blue-50" : isLocked ? "bg-gray-50" : ""} ${isLockMode && isModeActive ? "cursor-pointer hover:ring-2 hover:ring-red-300 hover:ring-inset" : ""} ${isForceMode && isModeActive ? "cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-inset" : ""}`}>
                                     <div className={`max-h-20 overflow-y-auto p-2 ${isModeActive ? "cursor-pointer" : ""}`}>
                                     {isLocked && <div className="rounded-xl bg-gray-200 p-2 text-sm font-semibold text-gray-600">예약 금지</div>}
-                                    {classItem && <div className="rounded-xl bg-yellow-100 p-2 text-yellow-900"><span className="block font-semibold">{classItem.label}</span><span className="text-xs">{classItem.subtitle}</span></div>}
+                                    {classItem && <div className="rounded-xl bg-blue-100 p-2 text-blue-900"><span className="block font-semibold">{classItem.label}</span><span className="text-xs">{classItem.subtitle}</span></div>}
                                     {confirmed.map((item) => <button key={item.reservation_id} onClick={() => handleReservationClick(item, true, currentDate, period, isLocked, isPast)} className="mt-1 w-full rounded-xl bg-brand p-2 text-sm font-semibold text-white">{item.name} · 상담 확정</button>)}
                                     {waiting.map((item) => <button key={item.reservation_id} onClick={() => handleReservationClick(item, false, currentDate, period, isLocked, isPast)} className="mt-1 w-full rounded-xl border border-brand bg-brand-soft p-2 text-sm font-semibold text-brand-accent">{item.name} · 상담 대기</button>)}
                                     </div>
