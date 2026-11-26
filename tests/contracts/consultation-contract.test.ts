@@ -64,7 +64,7 @@ const baseDraft: ConsultationDraft = {
   content: "상담 내용",
   teacher: "임경원 선생님",
   date: "2026-09-07",
-  period: "3교시",
+  period: "5교시",
 };
 assert.equal(validateConsultationDraft({ ...baseDraft, title: "" }, false), "제목을 입력해주세요");
 assert.equal(validateConsultationDraft({ ...baseDraft, content: "" }, false), "내용을 입력해주세요");
@@ -78,7 +78,7 @@ assert.deepEqual(createReservationInput(baseDraft), {
   content: "상담 내용",
   category: "취업",
   date: "2026-09-07",
-  period: "3교시",
+  period: "5교시",
 });
 
 const calls: Array<{ path: string; init?: RequestInit }> = [];

@@ -13,7 +13,7 @@ assert.match(teacher, /TeacherHeader/);
 assert.match(teacher, /진로 상담/);
 assert.match(teacher, /상담 예약 요청 목록/);
 assert.match(teacher, /예약 확정 정보/);
-assert.match(teacher, /WEEKLY_CLASS_SCHEDULE/);
+assert.match(teacher, /getTeacherClassScheduleEntry/);
 assert.match(teacher, /getTeacherConsultations\(kind\)/);
 assert.match(teacher, /approveConsultation\(kind,\s*selection.reservation.reservation_id\)/);
 

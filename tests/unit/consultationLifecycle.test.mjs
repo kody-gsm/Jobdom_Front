@@ -13,7 +13,8 @@ const root = new URL("../../src/fsd/", import.meta.url);
 const harnessUrl = new URL("./consultationHookHarness.mjs", import.meta.url).href;
 const consultationExports = `export * from ${JSON.stringify(new URL("entities/consultation/model/rules.ts", root).href)};
 export * from ${JSON.stringify(new URL("entities/consultation/model/schedule.ts", root).href)};
-export * from ${JSON.stringify(new URL("entities/consultation/model/labels.ts", root).href)};`;
+export * from ${JSON.stringify(new URL("entities/consultation/model/labels.ts", root).href)};
+export * from ${JSON.stringify(new URL("entities/consultation/model/teacherClassSchedule.ts", root).href)};`;
 registerHooks({
   resolve(specifier, context, nextResolve) {
     if (["react", "next/navigation", "@fsd/entities/user"].includes(specifier)) {
@@ -30,7 +31,8 @@ registerHooks({
 });
 const { useConsultationForm } = await import("../../src/fsd/features/submit-consultation/model/useConsultationForm.ts");
 
-const teacher = { id: 3, name: "임경원" };
+const teacher = { id: 3, name: "김권예소" };
+const classTeacher = { id: 3, name: "임경원" };
 const key = getConsultationDraftStorageKey("12");
 const savedDraft = {
   title: "진로 상담", content: "포트폴리오 상담", category: "취업",
@@ -89,13 +91,41 @@ test("career: saved 9교시 is not restored or selectable for 임경원", async 
     ...savedDraft, period: "9교시",
   });
   const form = mount("career");
-  teachers.resolve([teacher]);
+  teachers.resolve([classTeacher]);
   await environment.settle();
   assert.equal(form.value.selectedTime, null);
   assert.equal(form.value.isTimeUnavailable("9교시"), true);
   form.value.toggleTime("9교시");
   await environment.settle();
   assert.equal(form.value.selectedTime, null);
+});
+
+test("teacher class blocks: every blue cell is unavailable even when the server reports no locks", async () => {
+  seedDraft();
+  const form = mount();
+  teachers.resolve([classTeacher]);
+  await environment.settle();
+  const blocked = [[1, 2, 3, 4, 7], [1, 2, 4, 6, 7], [1, 4, 5, 6, 7], [3, 4, 5, 6, 7], [1, 4, 7]];
+  for (const [index, periods] of blocked.entries()) {
+    const date = `2026-11-0${index + 2}`;
+    if (form.value.selectedDate !== date) form.value.toggleDate(date);
+    await environment.settle();
+    for (let period = 1; period <= 7; period++) {
+      assert.equal(form.value.isTimeUnavailable(`${period}교시`), periods.includes(period));
+    }
+  }
+});
+
+test("teacher class blocks: a saved blue cell is not restored or submitted", async () => {
+  writeConsultationDraft(environment.storage, key, "career", { ...savedDraft, period: "1교시" });
+  const form = mount();
+  teachers.resolve([classTeacher]);
+  await environment.settle();
+  assert.equal(form.value.selectedTime, null);
+  form.value.toggleTime("1교시");
+  await environment.settle();
+  await form.value.handleSubmit(event);
+  assert.equal(postCalls().length, 0);
 });
 
 for (const period of ["8교시", "9교시"]) {

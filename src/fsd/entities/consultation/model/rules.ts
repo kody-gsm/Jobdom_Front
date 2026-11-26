@@ -8,6 +8,7 @@ import type {
   ReservationInput,
 } from "./types.ts";
 import { CONSULTATION_SCHEDULE } from "./schedule.ts";
+import { getTeacherClassScheduleEntry } from "./teacherClassSchedule.ts";
 
 const KOREA_TIME_ZONE = "Asia/Seoul";
 
@@ -182,6 +183,9 @@ export const validateConsultationDraft = (
   if (!draft.date) return "날짜를 선택해주세요";
   if (!draft.period) return "교시를 선택해주세요";
   if (isBlockedWeePeriod(toConsultationKind(draft.type), draft.period)) return WEE_LATE_PERIOD_ERROR;
+  if (draft.teacher && getTeacherClassScheduleEntry({ name: draft.teacher }, draft.date, draft.period)) {
+    return "수업 시간에는 상담을 신청할 수 없습니다. 다른 교시를 선택해주세요.";
+  }
   if (draft.type === "career" && hasCareerReservation) {
     return "진로 상담은 중복 신청할 수 없습니다";
   }

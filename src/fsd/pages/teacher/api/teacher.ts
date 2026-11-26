@@ -1,4 +1,4 @@
-import { assertWeePeriodAllowed, createConsultationApi } from "@fsd/entities/consultation";
+import { assertWeePeriodAllowed, createConsultationApi, getTeacherClassScheduleEntry } from "@fsd/entities/consultation";
 import type { ConsultationKind, CounselingCategory, TeacherSlotStatus } from "@fsd/entities/consultation";
 import { createBannerApi } from "@fsd/entities/banner";
 import { getSession, requestWithSession } from "@fsd/entities/user";
@@ -37,6 +37,9 @@ export type ForceReservationInput = {
 
 export const forceCreateConsultation = async (kind: ConsultationKind, input: ForceReservationInput) => {
     assertWeePeriodAllowed(kind, input.period);
+    if (getTeacherClassScheduleEntry(getSession(), input.date, input.period)) {
+        throw new Error("수업 시간에는 상담을 추가 신청할 수 없습니다.");
+    }
     return requestWithSession<string>(`/teacher/${kind}/force`, {
         method: "POST",
         body: JSON.stringify(input),
