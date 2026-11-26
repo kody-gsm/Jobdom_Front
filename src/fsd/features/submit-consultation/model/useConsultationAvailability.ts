@@ -5,6 +5,7 @@ import {
   getNextWeekdays,
   getSelectableConsultationDates,
   getSelectablePeriods,
+  getTeacherClassScheduleEntry,
   toConsultationKind,
 } from "@fsd/entities/consultation";
 import type { ConsultationType } from "@fsd/entities/consultation";
@@ -238,6 +239,7 @@ export const useConsultationAvailability = ({
   const isTimeUnavailable = (time: string) =>
     availabilityStatus !== "success" ||
     !isInAvailablePeriods(time) ||
+    Boolean(getTeacherClassScheduleEntry(selectedTeacher, selectedDate, time)) ||
     (selectedDate === koreaToday && !isSelectableToday(time)) ||
     serverUnavailablePeriods.has(time) ||
     (selectedTeacher !== null &&
